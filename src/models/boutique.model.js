@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const User = sequelize.define('User', {
+const Boutique = sequelize.define('Boutique', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -11,50 +11,46 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  prenom: {
+  description: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: { isEmail: true }
-  },
-  mot_de_passe: {
+  localisation: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  adresse: {
-    type: DataTypes.STRING,
+  heure_ouverture: {
+    type: DataTypes.TIME,
     allowNull: false,
-  },
+    },
+    heure_fermeture: {
+    type: DataTypes.TIME,
+    allowNull: false,
+    },
   telephone: {
     type: DataTypes.STRING,
     allowNull: true,
     unique: true
   },
-  photoProfil: {
-    type: DataTypes.STRING,
-    allowNull: true,
+   logo: {
+    type: DataTypes.TEXT('long'),
+    allowNull: true
   },
-  
-  role: {
-    type: DataTypes.ENUM('Admin', 'Acheteur', 'Vendeur'),
-    defaultValue: 'Acheteur',
-    allowNull: false
+  vendeurId: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+        model: 'utilisateur',
+        key: 'id'
     },
-  statut: {
-    type: DataTypes.ENUM('actif', 'inactif'),
-    defaultValue: 'actif'
-  },
-
-
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE'
+    },
 }, {
-  tableName: 'utilisateur',
+  tableName: 'boutique',
   timestamps: true,
   paranoid: true, 
   underscored: true
 });
 
-module.exports = User;
+module.exports = Boutique;

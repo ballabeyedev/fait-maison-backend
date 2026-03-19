@@ -2,22 +2,43 @@ const AuthService = require('../services/auth.service');
 const formatUser = require('../utils/formatUser');
 
 exports.inscriptionUser = async (req, res) => {
-  const {
-    nom,
-    prenom,
-    email,
-    mot_de_passe,
-    adresse,
-    telephone,
-    role,
-
-  } = req.body;
-
-  const photoProfil = req.files['photoProfil'] ? req.files['photoProfil'][0] : null;
-  const logo = req.files['logo'] ? req.files['logo'][0] : null;
-
-
   try {
+
+    const {
+      nom,
+      prenom,
+      email,
+      mot_de_passe,
+      adresse,
+      telephone,
+      role,
+
+      nomBoutique,
+      description,
+      localisation,
+      heure_ouverture,
+      heure_fermeture,
+      telephoneBoutique
+
+    } = req.body;
+
+    const photoProfil = req.files?.['photoProfil']?.[0] || null;
+    const logo = req.files?.['logo']?.[0] || null;
+
+    let boutique = null;
+
+    if (role === 'Vendeur' && nomBoutique) {
+      boutique = {
+        nom: nomBoutique,
+        description,
+        localisation,
+        heure_ouverture,
+        heure_fermeture,
+        telephone: telephoneBoutique,
+        logo 
+      };
+    }
+
     const result = await AuthService.register({
       nom,
       prenom,
@@ -27,8 +48,7 @@ exports.inscriptionUser = async (req, res) => {
       telephone,
       photoProfil,
       role,
-      logo,
-
+      boutique 
     });
 
     if (!result.success) {
@@ -39,7 +59,8 @@ exports.inscriptionUser = async (req, res) => {
 
     return res.status(201).json({
       message: result.message,
-      utilisateur: formatUser(result.utilisateur)
+      utilisateur: formatUser(result.utilisateur),
+      boutique: result.boutique 
     });
 
   } catch (err) {

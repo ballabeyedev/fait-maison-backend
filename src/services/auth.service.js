@@ -1,103 +1,114 @@
-const Utilisateur = require('../models/utilisateur.model');
+const { Utilisateur, Boutique} = require('../models');
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { jwtConfig, bcryptConfig } = require('../config/security');
 const sequelize = require('../config/db');
-const { uploadImage } = require('../middlewares/uploadService'); // ton upload vers Cloudinary
-
+const { uploadImage } = require('../middlewares/uploadService');
 
 class AuthService {
 
-  // -------------------- INSCRIPTION --------------------
-static async register({
-  nom,
-  prenom,
-  email,
-  mot_de_passe,
-  adresse,
-  telephone,
-  photoProfil,
-  role = 'Particulier',
-  logo,
-  
-}) {
-  const t = await sequelize.transaction();
+  static async register({
+    nom,
+    prenom,
+    email,
+    mot_de_passe,
+    adresse,
+    telephone,
+    photoProfil,
+    role = 'Acheteur',
 
-  try {
-    const emailClean = email.trim().toLowerCase();
+    boutique
+  }) {
 
-    const exist = await Utilisateur.findOne({
-      where: { email: emailClean },
-      transaction: t
-    });
+    const t = await sequelize.transaction();
 
-    if (exist) {
-      await t.rollback();
-      return {
-        success: false,
-        message: "Cet email est déjà utilisé"
-      };
-    }
+    try {
+      const emailClean = email.trim().toLowerCase();
 
-    if (telephone) {
-      const telExist = await Utilisateur.findOne({
-        where: { telephone },
+      // 🔍 Vérification email
+      const exist = await Utilisateur.findOne({
+        where: { email: emailClean },
         transaction: t
       });
 
-      if (telExist) {
+      if (exist) {
         await t.rollback();
-        return {
-          success: false,
-          message: "Ce numéro de téléphone est déjà utilisé"
-        };
+        return { success: false, message: "Cet email est déjà utilisé" };
       }
+
+      // 🔍 Vérification téléphone
+      if (telephone) {
+        const telExist = await Utilisateur.findOne({
+          where: { telephone },
+          transaction: t
+        });
+
+        if (telExist) {
+          await t.rollback();
+          return { success: false, message: "Téléphone déjà utilisé" };
+        }
+      }
+
+      // 🔐 Hash mot de passe
+      const hashedPassword = await bcrypt.hash(
+        mot_de_passe,
+        bcryptConfig.saltRounds
+      );
+
+      // 🖼️ Upload photo
+      let photoUrl = null;
+      if (photoProfil?.path) {
+        photoUrl = await uploadImage(photoProfil.path);
+      }
+
+      // 👤 Création utilisateur
+      const utilisateur = await Utilisateur.create({
+        nom,
+        prenom,
+        email: emailClean,
+        mot_de_passe: hashedPassword,
+        adresse,
+        telephone,
+        photoProfil: photoUrl,
+        role
+      }, { transaction: t });
+
+      let boutiqueCreated = null;
+
+      if (role === 'Vendeur' && boutique) {
+
+        let logoUrl = null;
+        if (boutique.logo?.path) {
+          logoUrl = await uploadImage(boutique.logo.path);
+        }
+
+        boutiqueCreated = await Boutique.create({
+          nom: boutique.nom,
+          description: boutique.description,
+          localisation: boutique.localisation,
+          heure_ouverture: boutique.heure_ouverture,
+          heure_fermeture: boutique.heure_fermeture,
+          telephone: boutique.telephone,
+          logo: logoUrl,
+          vendeurId: utilisateur.id
+        }, { transaction: t });
+      }
+
+      await t.commit();
+
+      return {
+        success: true,
+        message: "Inscription réussie",
+        utilisateur,
+        boutique: boutiqueCreated
+      };
+
+    } catch (err) {
+      await t.rollback();
+      throw err;
     }
-
-    const hashedPassword = await bcrypt.hash(
-      mot_de_passe,
-      bcryptConfig.saltRounds
-    );
-
-    let photoUrl = null;
-
-    if (photoProfil && photoProfil.path) {
-      photoUrl = await uploadImage(photoProfil.path);
-    }
-
-    let logoUrl= null;
-
-    if (logo && logo.path) {
-      logoUrl = await uploadImage(logo.path);
-    }
-
-
-    const utilisateur = await Utilisateur.create({
-      nom,
-      prenom,
-      email: emailClean,
-      mot_de_passe: hashedPassword,
-      adresse,
-      telephone,
-      photoProfil: photoUrl,
-      role,
-      logo:logoUrl,
-    }, { transaction: t });
-
-    await t.commit();
-
-    return {
-      success: true,
-      message: "Inscription réussie",
-      utilisateur
-    };
-
-  } catch (err) {
-    await t.rollback();
-    throw err;
   }
-}
-
 
   // -------------------- CONNEXION --------------------
   static async login({ identifiant, mot_de_passe }) {
@@ -138,7 +149,11 @@ static async register({
       role: utilisateur.role,
     }, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
 
-    return {success: true, token, utilisateur };
+    return {
+      success: true, 
+      token, 
+      utilisateur 
+    };
   }
 
 }
