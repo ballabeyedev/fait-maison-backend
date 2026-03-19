@@ -17,6 +17,9 @@ app.use(rateLimit(rateLimitConfig));
 // Routes
 const authRoutes = require('./routes/auth.route');
 const vendeurRoutes = require('./routes/vendeurs/vendeur.route'); 
+const acheteursRoutes = require('./routes/acheteurs/acheteurs.route'); 
+const adminRoutes = require('./routes/admin/admin.route'); 
+
 
 // Serveur fichiers statiques pour les uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -24,5 +27,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Définition des routes
 app.use('/faitMaison/auth', authRoutes);
 app.use('/faitMaison/vendeur', vendeurRoutes);
+
+app.use('/faitMaison/acheteurs', acheteursRoutes); 
+app.use('/faitMaison/admin', adminRoutes);
 
 module.exports = app;
