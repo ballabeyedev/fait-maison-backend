@@ -137,6 +137,39 @@ class AdminService {
     };
   }
 
+  // 7. Créer une catégorie
+static async creerCategorie(data) {
+  try {
+    const { nom, description } = data;
+
+    // Vérifier si la catégorie existe déjà
+    const existe = await Categorie.findOne({
+      where: { nom }
+    });
+
+    if (existe) {
+      return {
+        message: "Cette catégorie existe déjà",
+      };
+    }
+
+    // Création
+    const categorie = await Categorie.create({
+      nom,
+      description
+    });
+
+    return {
+      message: "Catégorie créée avec succès",
+      categorie
+    };
+
+  } catch (error) {
+    console.error("Erreur creerCategorie :", error);
+    throw error;
+  }
+}
+
 }
 
 module.exports = AdminService;

@@ -56,4 +56,10 @@ router.get(
   adminController.nombreProduitsActifs
 );
 
+// -------------------- NOMBRE DE PRODUITS ACTIFS --------------------
+router.post(
+  '/ajout-categorie',
+  adminController.ajoutCategorie 
+);
+
 module.exports = router;
