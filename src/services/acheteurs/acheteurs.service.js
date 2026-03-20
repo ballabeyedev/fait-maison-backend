@@ -152,7 +152,7 @@ static async rechercherProduits(query) {
       tel = '221' + tel;
     }
 
-    // Message amélioré
+        // Message amélioré
         const message = `
           Bonjour ${produit.vendeur.nom  || ''} ${produit.vendeur.prenom  || ''},
 
