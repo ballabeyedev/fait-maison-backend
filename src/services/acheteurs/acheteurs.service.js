@@ -4,9 +4,7 @@ const { Op, col, where } = require('sequelize');
 class AcheteurService {
 
   // 1. Liste de tous les produits (publics, paginés)
-  static async listerTousProduits({ page = 1, limit = 20 }) {
-    const offset = (page - 1) * limit;
-
+  static async listerTousProduits() {
     const { count, rows } = await Produit.findAndCountAll({
       where: {
         quantite: { [Op.gt]: 0 } // Stock > 0
@@ -31,77 +29,53 @@ class AcheteurService {
           ]
         }
       ],
-      order: [['createdAt', 'DESC']],
-      limit,
-      offset
+      order: [['createdAt', 'DESC']]
     });
 
     return {
-      produits: rows,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        pages: Math.ceil(count / limit)
-      }
+      produits: rows
     };
   }
 
   // 2. Rechercher par nom ou catégorie
- static async rechercherProduits(query, { page = 1, limit = 20 }) {
-  const offset = (page - 1) * limit;
+static async rechercherProduits(query) {
 
   const { count, rows } = await Produit.findAndCountAll({
     where: {
       quantite: { [Op.gt]: 0 },
-      nom: { [Op.iLike]: `%${query}%` } // Filtre sur nom du produit
+      [Op.or]: [
+        { nom: { [Op.iLike]: `%${query}%` } },
+        { '$categorie.nom$': { [Op.iLike]: `%${query}%` } }
+      ]
     },
     include: [
       {
         model: Categorie,
         as: 'categorie',
-        attributes: ['id', 'nom'],
-        required: false,
-        where: {
-          nom: { [Op.iLike]: `%${query}%` } // Filtre sur nom de catégorie
-        }
+        attributes: ['nom'],
+        required: false
       },
       {
         model: Utilisateur,
         as: 'vendeur',
         attributes: ['id', 'nom', 'prenom'],
         include: [
-          {
-            model: Boutique,
-            as: 'boutiques',
-            attributes: ['localisation'],
-            required: false
-          }
+          { model: Boutique, as: 'boutiques', attributes: ['localisation'], required: false }
         ]
       }
     ],
     order: [['nom', 'ASC']],
-    limit,
-    offset,
-    distinct: true // Important pour que count soit correct
+    distinct: true
   });
 
   return {
-    produits: rows,
-    pagination: {
-      page,
-      limit,
-      total: count,
-      pages: Math.ceil(count / limit)
-    }
+    produits: rows
   };
 }
 
   // 3. Filtrer par ville (boutique.localisation)
-  static async filtrerParVille(ville, { page = 1, limit = 20 }) {
-    const offset = (page - 1) * limit;
-
-    const { count, rows } = await Produit.findAndCountAll({
+  static async filtrerParVille(ville) {
+    const { rows } = await Produit.findAndCountAll({
       where: {
         quantite: { [Op.gt]: 0 }
       },
@@ -109,7 +83,7 @@ class AcheteurService {
         {
           model: Categorie,
           as: 'categorie',
-          attributes: ['id', 'nom']
+          attributes: ['nom']
         },
         {
           model: Utilisateur,
@@ -128,20 +102,11 @@ class AcheteurService {
             }
           ]
         }
-      ],
-      order: [['createdAt', 'DESC']],
-      limit,
-      offset
+      ]
     });
 
     return {
       produits: rows,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        pages: Math.ceil(count / limit)
-      },
       ville
     };
   }

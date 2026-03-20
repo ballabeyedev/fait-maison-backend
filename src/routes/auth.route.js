@@ -4,7 +4,8 @@ const authController = require('../controllers/auth.controller');
 const auth = require('../middlewares/auth.middleware');
 const multer = require('multer');
 
-const upload = multer({ dest: 'uploads/' });
+const upload = require('../middlewares/upload.middleware');
+
 
 router.post(
   '/register',
@@ -14,6 +15,9 @@ router.post(
   ]),
   authController.inscriptionUser
 );
+
+router.post('/login', authController.login);
+
 router.post('/login', authController.login);
 
 module.exports = router;

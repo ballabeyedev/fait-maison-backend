@@ -27,8 +27,8 @@ class VendeurService {
 
     try {
       let imageUrl = null;
-      if (image?.path) {
-        imageUrl = await uploadImage(image.path);
+      if (image?.buffer) {
+        imageUrl = await uploadImage(image.buffer);
       }
 
       const produit = await Produit.create({
@@ -63,8 +63,8 @@ class VendeurService {
       if (!produit) throw new Error("Produit introuvable ou accès interdit");
 
       // Upload nouvelle image si fournie
-      if (updates.image?.path) {
-        updates.image = await uploadImage(updates.image.path);
+      if (updates.image?.buffer) {
+        updates.image = await uploadImage(updates.image.buffer);
       } else {
         delete updates.image;
       }

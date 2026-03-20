@@ -2,12 +2,17 @@ const express = require('express');
 const router = express.Router();
 const VendeurController = require('../../controllers/vendeurs/vendeur.controller');
 const authMiddleware = require('../../middlewares/auth.middleware');
+const checkActiveUser = require('../../middlewares//checkActiveUser.middleware');
+
 const isVendeur = require('../../middlewares/isVendeur.middleware'); 
 const multer = require('multer');
+const storage = multer.memoryStorage();
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ storage });
 
 router.use(authMiddleware);
+router.use(checkActiveUser);
+
 router.use(isVendeur);
 
 // -------------------- LISTER PRODUITS --------------------

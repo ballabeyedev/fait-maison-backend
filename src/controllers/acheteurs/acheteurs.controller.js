@@ -5,13 +5,14 @@ class AcheteurController {
   // 1. Liste tous les produits
   static async listerProduits(req, res) {
     try {
-      let { page = 1, limit = 20 } = req.query;
+      const result = await AcheteurService.listerTousProduits();
 
-      // Conversion sécurisée
-      page = parseInt(page) || 1;
-      limit = parseInt(limit) || 20;
-
-      const result = await AcheteurService.listerTousProduits({ page, limit });
+      if (!result.produits.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Aucun produit disponible pour le moment.'
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -28,10 +29,10 @@ class AcheteurController {
     }
   }
 
-  // 2. Rechercher produits
+  // 2. Rechercher produits par nom ou catégorie
   static async rechercherProduits(req, res) {
     try {
-      let { q, page = 1, limit = 20 } = req.query;
+      let { q } = req.query;
 
       if (!q || q.trim() === '') {
         return res.status(400).json({
@@ -40,10 +41,14 @@ class AcheteurController {
         });
       }
 
-      page = parseInt(page) || 1;
-      limit = parseInt(limit) || 20;
+      const result = await AcheteurService.rechercherProduits(q.trim());
 
-      const result = await AcheteurService.rechercherProduits(q.trim(), { page, limit });
+      if (!result.produits.length) {
+        return res.status(404).json({
+          success: false,
+          message: `Aucun produit trouvé correspondant à "${q.trim()}".`
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -63,7 +68,7 @@ class AcheteurController {
   // 3. Filtrer par ville
   static async filtrerParVille(req, res) {
     try {
-      let { ville, page = 1, limit = 20 } = req.query;
+      let { ville } = req.query;
 
       if (!ville || ville.trim() === '') {
         return res.status(400).json({
@@ -72,10 +77,14 @@ class AcheteurController {
         });
       }
 
-      page = parseInt(page) || 1;
-      limit = parseInt(limit) || 20;
+      const result = await AcheteurService.filtrerParVille(ville.trim());
 
-      const result = await AcheteurService.filtrerParVille(ville.trim(), { page, limit });
+      if (!result.produits.length) {
+        return res.status(404).json({
+          success: false,
+          message: `Aucun produit trouvé dans la ville "${ville.trim()}".`
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -108,14 +117,13 @@ class AcheteurController {
 
       return res.status(200).json({
         success: true,
-        whatsappUrl,
-        message: 'Lien WhatsApp généré avec succès !'
+        message: 'Lien WhatsApp généré avec succès !',
+        whatsappUrl
       });
 
     } catch (err) {
       console.error('❌ Erreur WhatsApp:', err);
 
-      // Différencier erreur produit non trouvé et autre erreur
       const statusCode = err.message === 'Produit non trouvé' || err.message.includes('Téléphone') ? 404 : 500;
 
       return res.status(statusCode).json({
@@ -125,4 +133,5 @@ class AcheteurController {
     }
   }
 }
+
 module.exports = AcheteurController;
