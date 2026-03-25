@@ -76,7 +76,7 @@ exports.inscriptionUser = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, telephone, mot_de_passe } = req.body;
   
-  // Accepter soit email soit telephone comme identifiant
+  // Choisir identifiant : email ou téléphone
   const identifiant = email || telephone;
   
   if (!identifiant || !mot_de_passe) {

@@ -24,6 +24,11 @@ router.get(
     AcheteurController.filtrerParVille
 );
 
+router.get(
+    '/liste-boutiques',              
+    AcheteurController.listerBoutiques
+);
+
 // 4. Contacter vendeur via WhatsApp
 router.get(
     '/contacter-vendeur-par-whatsapp/:id', 

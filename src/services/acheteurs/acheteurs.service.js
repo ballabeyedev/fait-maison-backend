@@ -174,6 +174,23 @@ static async rechercherProduits(query) {
     return `https://wa.me/${tel}?text=${text}`;
   }
 
+  // 4. Liste de toutes les boutiques
+  static async listerBoutiques() {
+    const boutiques = await Boutique.findAll({
+      attributes: ['id', 'nom', 'description', 'localisation', 'telephone', 'photo', 'createdAt'],
+      include: [
+        {
+          model: Utilisateur,
+          as: 'vendeur',
+          attributes: ['id', 'nom', 'prenom']
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+ 
+    return { boutiques };
+  }
+
 }
 
 module.exports = AcheteurService

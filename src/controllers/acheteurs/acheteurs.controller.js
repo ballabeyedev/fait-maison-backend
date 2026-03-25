@@ -101,6 +101,21 @@ class AcheteurController {
     }
   }
 
+  static async listerBoutiques(req, res) {
+    try {
+      const result = await AcheteurService.listerBoutiques();
+      return res.status(200).json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
   // 4. WhatsApp vendeur pour produit
   static async contacterVendeurWhatsapp(req, res) {
     try {
