@@ -191,6 +191,53 @@ static async rechercherProduits(query) {
     return { boutiques };
   }
 
+  static async getProduitsByBoutique(boutiqueId) {
+    const boutique = await Boutique.findByPk(boutiqueId, {
+      attributes: ['id', 'nom', 'description', 'localisation', 'logo',
+                   'heure_ouverture', 'heure_fermeture'],
+      include: [
+        {
+          model: Utilisateur,
+          as: 'vendeur',
+          attributes: ['id', 'nom', 'prenom']
+        }
+      ]
+    });
+ 
+    if (!boutique) {
+      throw new Error('Boutique introuvable');
+    }
+ 
+    const { rows: produits } = await Produit.findAndCountAll({
+      where: { quantite: { [Op.gt]: 0 } },
+      include: [
+        {
+          model: Categorie,
+          as: 'categorie',
+          attributes: ['id', 'nom']
+        },
+        {
+          model: Utilisateur,
+          as: 'vendeur',
+          attributes: ['id', 'nom', 'prenom'],
+          required: true,
+          include: [
+            {
+              model: Boutique,
+              as: 'boutiques',
+              attributes: ['id', 'localisation'],
+              where: { id: boutiqueId },
+              required: true
+            }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+ 
+    return { boutique, produits };
+  }
+
 }
 
 module.exports = AcheteurService

@@ -35,5 +35,11 @@ router.get(
     AcheteurController.contacterVendeurWhatsapp
 );
 
+// Lister les produits d'une boutique
+router.get(
+  '/liste-produit-par-boutique/:boutiqueId',
+  AcheteurController.getProduitsByBoutique
+);
+
 
 module.exports = router;

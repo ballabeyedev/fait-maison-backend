@@ -147,6 +147,42 @@ class AcheteurController {
       });
     }
   }
+
+  // 5. Lister les produits d'une boutique spécifique
+static async getProduitsByBoutique(req, res) {
+  try {
+    const { boutiqueId } = req.params;
+
+    if (!boutiqueId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètre boutiqueId requis'
+      });
+    }
+
+    const result = await AcheteurService.getProduitsByBoutique(boutiqueId);
+
+    if (!result.produits.length) {
+      return res.status(404).json({
+        success: false,
+        message: `Aucun produit trouvé pour la boutique "${result.boutique.nom}".`
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ...result
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur getProduitsByBoutique:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur serveur lors de la récupération des produits de la boutique'
+    });
+  }
+}
 }
 
 module.exports = AcheteurController;
