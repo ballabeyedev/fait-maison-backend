@@ -18,7 +18,7 @@ class AcheteurService {
         {
           model: Utilisateur,
           as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom'],
+          attributes: ['id', 'nom', 'prenom', 'telephone'],
           include: [
             {
               model: Boutique,
@@ -88,7 +88,7 @@ static async rechercherProduits(query) {
         {
           model: Utilisateur,
           as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom'],
+          attributes: ['id', 'nom', 'prenom', 'telephone'],
           required: true,
           include: [
             {
@@ -123,7 +123,7 @@ static async rechercherProduits(query) {
         {
           model: Utilisateur,
           as: 'vendeur',
-          attributes: ['telephone', 'nom'],
+          attributes: ['telephone', 'nom', 'prenom'],
           include: [{
             model: Boutique,
             as: 'boutiques',
