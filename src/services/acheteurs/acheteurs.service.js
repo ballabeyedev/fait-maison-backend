@@ -177,7 +177,7 @@ static async rechercherProduits(query) {
   // 4. Liste de toutes les boutiques
   static async listerBoutiques() {
     const boutiques = await Boutique.findAll({
-      attributes: ['id', 'nom', 'description', 'localisation', 'telephone', 'photo', 'createdAt'],
+      attributes: ['id', 'nom', 'description', 'localisation', 'telephone', 'logo', 'heure_ouverture', 'heure_fermeture'],
       include: [
         {
           model: Utilisateur,
