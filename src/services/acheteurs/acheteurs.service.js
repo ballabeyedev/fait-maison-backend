@@ -58,7 +58,7 @@ static async rechercherProduits(query) {
       {
         model: Utilisateur,
         as: 'vendeur',
-        attributes: ['id', 'nom', 'prenom'],
+        attributes: ['id', 'nom', 'prenom', 'telephone'],
         include: [
           { model: Boutique, as: 'boutiques', attributes: ['localisation'], required: false }
         ]
@@ -182,7 +182,7 @@ static async rechercherProduits(query) {
         {
           model: Utilisateur,
           as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom']
+          attributes: ['id', 'nom', 'prenom', 'telephone']
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -199,7 +199,7 @@ static async rechercherProduits(query) {
         {
           model: Utilisateur,
           as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom']
+          attributes: ['id', 'nom', 'prenom', 'telephone']
         }
       ]
     });
