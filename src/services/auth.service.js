@@ -58,9 +58,10 @@ class AuthService {
 
       // 🖼️ Upload photo
       let photoUrl = null;
-      if (photoProfil?.path) {
-        photoUrl = await uploadImage(photoProfil.path);
+      if (photoProfil?.buffer) {
+        photoUrl = await uploadImage(photoProfil.buffer);
       }
+
 
       // 👤 Création utilisateur
       const utilisateur = await Utilisateur.create({
@@ -78,9 +79,10 @@ class AuthService {
 
       if (role === 'Vendeur' && boutique) {
 
+        // 🖼️ Upload logo boutique
         let logoUrl = null;
-        if (boutique.logo?.path) {
-          logoUrl = await uploadImage(boutique.logo.path);
+        if (boutique?.logo?.buffer) {
+          logoUrl = await uploadImage(boutique.logo.buffer);
         }
 
         boutiqueCreated = await Boutique.create({
