@@ -30,6 +30,7 @@ class AuthService {
       console.log("📧 Email:", email);
       console.log("📱 Téléphone:", telephone);
       console.log("👤 Role:", role);
+      console.log("🔑 Password reçu:", mot_de_passe);
 
       const emailClean = email.trim().toLowerCase();
 
