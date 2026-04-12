@@ -64,11 +64,14 @@ class AuthService {
       }
 
       // 🔐 PASSWORD
-      console.log("🔐 Hash password...");
+      console.log("🔐 Hash password start");
+
       const hashedPassword = await bcrypt.hash(
         mot_de_passe,
         bcryptConfig.saltRounds
       );
+
+      console.log("🔐 Hash password done");
 
       // 🖼️ IMAGE
       let photoUrl = null;

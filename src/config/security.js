@@ -14,7 +14,7 @@ const jwtConfig = {
  * Configuration Bcrypt
  */
 const bcryptConfig = {
-  saltRounds: 12
+  saltRounds: 10
 };
 
 /**
