@@ -1,28 +1,17 @@
-const { Produit, Categorie, Utilisateur, Boutique } = require('../../models');
+const { Produit, Categorie, Utilisateur, Boutique, Abonnement } = require('../../models');
 const { Op } = require('sequelize');
 const includeVendeurActif = require('../../utils/includeVendeurActif');
 
 const LIMIT = 15;
 
-// 🔥 HELPERS PROPRES
 const paginate = (page = 1) => ({
   limit: LIMIT,
   offset: (page - 1) * LIMIT
 });
 
-const buildVendeurInclude = () => {
-  const vendeur = includeVendeurActif();
-
-  return {
-    ...vendeur,
-    include: [...(vendeur.include || [])]
-  };
-};
-
 class AcheteurService {
-
   // ==============================
-  // 1. PRODUITS
+  // 1. LISTE TOUS PRODUITS (paginer)
   // ==============================
   static async listerTousProduits(page = 1) {
     const { limit, offset } = paginate(page);
@@ -31,16 +20,14 @@ class AcheteurService {
       limit,
       offset,
       distinct: true,
-      where: {
-        quantite: { [Op.gt]: 0 }
-      },
+      where: { quantite: { [Op.gt]: 0 } },
       include: [
         {
           model: Categorie,
           as: 'categorie',
           attributes: ['id', 'nom']
         },
-        buildVendeurInclude()
+        includeVendeurActif()
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -54,10 +41,21 @@ class AcheteurService {
   }
 
   // ==============================
-  // 2. RECHERCHE
+  // 2. RECHERCHE PAR NOM OU CATÉGORIE
   // ==============================
   static async rechercherProduits(query, page = 1) {
     const { limit, offset } = paginate(page);
+
+    // Nettoyage et validation
+    if (!query || !query.trim()) {
+      return {
+        produits: [],
+        total: 0,
+        page,
+        pages: 0
+      };
+    }
+    const searchTerm = `%${query.trim()}%`;
 
     const { rows, count } = await Produit.findAndCountAll({
       limit,
@@ -66,8 +64,8 @@ class AcheteurService {
       where: {
         quantite: { [Op.gt]: 0 },
         [Op.or]: [
-          { nom: { [Op.iLike]: `%${query}%` } },
-          { '$categorie.nom$': { [Op.iLike]: `%${query}%` } }
+          { nom: { [Op.iLike]: searchTerm } },
+          { '$categorie.nom$': { [Op.iLike]: searchTerm } }
         ]
       },
       include: [
@@ -76,7 +74,7 @@ class AcheteurService {
           as: 'categorie',
           attributes: ['id', 'nom']
         },
-        buildVendeurInclude()
+        includeVendeurActif()
       ],
       order: [['nom', 'ASC']]
     });
@@ -90,20 +88,27 @@ class AcheteurService {
   }
 
   // ==============================
-  // 3. FILTRE VILLE
+  // 3. FILTRER PAR VILLE (localisation de la boutique)
   // ==============================
   static async filtrerParVille(ville, page = 1) {
-    const { limit, offset } = paginate(page);
+    if (!ville || !ville.trim()) {
+      return {
+        produits: [],
+        total: 0,
+        page,
+        pages: 0,
+        ville: null
+      };
+    }
 
-    const vendeur = includeVendeurActif();
+    const { limit, offset } = paginate(page);
+    const villeSearch = `%${ville.trim()}%`;
 
     const { rows, count } = await Produit.findAndCountAll({
       limit,
       offset,
       distinct: true,
-      where: {
-        quantite: { [Op.gt]: 0 }
-      },
+      where: { quantite: { [Op.gt]: 0 } },
       include: [
         {
           model: Categorie,
@@ -111,16 +116,13 @@ class AcheteurService {
           attributes: ['id', 'nom']
         },
         {
-          ...vendeur,
+          ...includeVendeurActif(),
           include: [
-            ...(vendeur.include || []),
             {
               model: Boutique,
               as: 'boutiques',
               required: true,
-              where: {
-                localisation: { [Op.iLike]: `%${ville}%` }
-              }
+              where: { localisation: { [Op.iLike]: villeSearch } }
             }
           ]
         }
@@ -132,15 +134,17 @@ class AcheteurService {
       produits: rows,
       total: count,
       page,
-      ville,
+      ville: ville.trim(),
       pages: Math.ceil(count / LIMIT)
     };
   }
 
   // ==============================
-  // 4. WHATSAPP
+  // 4. GÉNÉRATION LIEN WHATSAPP (avec vérification abonnement)
   // ==============================
   static async contacterVendeurWhatsapp(produitId) {
+    const now = new Date();
+
     const produit = await Produit.findByPk(produitId, {
       include: [
         {
@@ -152,30 +156,40 @@ class AcheteurService {
           model: Utilisateur,
           as: 'vendeur',
           attributes: ['telephone', 'nom', 'prenom'],
+          required: true,
           include: [
             {
               model: Boutique,
               as: 'boutiques',
               attributes: ['telephone', 'localisation']
+            },
+            {
+              model: Abonnement,
+              as: 'abonnements',
+              required: true,
+              where: {
+                statut: 'actif',
+                dateFin: { [Op.gte]: now }
+              }
             }
           ]
         }
       ]
     });
 
-    if (!produit) throw new Error('Produit non trouvé');
+    if (!produit) throw new Error('Produit non trouvé ou vendeur non actif');
 
-    let tel =
-      produit.vendeur.boutiques?.[0]?.telephone ||
-      produit.vendeur.telephone;
-
+    let tel = produit.vendeur.boutiques?.[0]?.telephone || produit.vendeur.telephone;
     if (!tel) throw new Error('Téléphone vendeur non disponible');
 
-    tel = tel.replace(/[^0-9]/g, '');
-
-    if (!tel.startsWith('221')) {
+    // Nettoyage robuste du numéro
+    tel = tel.replace(/[^0-9+]/g, '');
+    tel = tel.replace(/^00/, '');       // enlever 00 international
+    if (!tel.match(/^(\+221|221)/)) {
+      tel = tel.replace(/^\+/, '');     // enlever + s'il reste
       tel = '221' + tel;
     }
+    tel = tel.replace(/^\+/, '');       // WhatsApp attend sans +
 
     const message = `
 Bonjour ${produit.vendeur.nom || ''} ${produit.vendeur.prenom || ''},
@@ -191,13 +205,13 @@ Je suis intéressé par votre produit :
 ${produit.description || ''}
 
 Merci.
-`;
+    `.trim();
 
     return `https://wa.me/${tel}?text=${encodeURIComponent(message)}`;
   }
 
   // ==============================
-  // 5. BOUTIQUES
+  // 5. LISTE DES BOUTIQUES (paginer)
   // ==============================
   static async listerBoutiques(page = 1) {
     const { limit, offset } = paginate(page);
@@ -206,16 +220,10 @@ Merci.
       limit,
       offset,
       attributes: [
-        'id',
-        'nom',
-        'description',
-        'localisation',
-        'telephone',
-        'logo',
-        'heure_ouverture',
-        'heure_fermeture'
+        'id', 'nom', 'description', 'localisation',
+        'telephone', 'logo', 'heure_ouverture', 'heure_fermeture'
       ],
-      include: [buildVendeurInclude()],
+      include: [includeVendeurActif()],
       order: [['createdAt', 'DESC']]
     });
 
@@ -228,23 +236,18 @@ Merci.
   }
 
   // ==============================
-  // 6. PRODUITS PAR BOUTIQUE
+  // 6. PRODUITS D'UNE BOUTIQUE SPÉCIFIQUE
   // ==============================
   static async getProduitsByBoutique(boutiqueId, page = 1) {
-    const { limit, offset } = paginate(page);
-
     const boutique = await Boutique.findByPk(boutiqueId);
+    if (!boutique) throw new Error('Boutique introuvable');
 
-    if (!boutique) throw new Error("Boutique introuvable");
-
-    const vendeur = includeVendeurActif();
+    const { limit, offset } = paginate(page);
 
     const { rows, count } = await Produit.findAndCountAll({
       limit,
       offset,
-      where: {
-        quantite: { [Op.gt]: 0 }
-      },
+      where: { quantite: { [Op.gt]: 0 } },
       include: [
         {
           model: Categorie,
@@ -252,9 +255,8 @@ Merci.
           attributes: ['id', 'nom']
         },
         {
-          ...vendeur,
+          ...includeVendeurActif(),
           include: [
-            ...(vendeur.include || []),
             {
               model: Boutique,
               as: 'boutiques',

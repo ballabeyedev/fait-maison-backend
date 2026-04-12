@@ -1,15 +1,13 @@
 const { Op } = require('sequelize');
-const { Utilisateur, Abonnement, Boutique } = require('../models');
+const { Utilisateur, Abonnement } = require('../models'); // adapter le chemin
 
 function includeVendeurActif(limitDate = new Date()) {
   return {
     model: Utilisateur,
     as: 'vendeur',
-    attributes: ['id', 'nom', 'prenom', 'telephone'],
+    attributes: ['id', 'nom', 'prenom', 'telephone', 'statut'],
     required: true,
-    where: {
-      statut: 'actif'
-    },
+    where: { statut: 'actif' },
     include: [
       {
         model: Abonnement,
@@ -17,16 +15,8 @@ function includeVendeurActif(limitDate = new Date()) {
         required: true,
         where: {
           statut: 'actif',
-          dateFin: {
-            [Op.gte]: limitDate
-          }
+          dateFin: { [Op.gte]: limitDate }
         }
-      },
-      {
-        model: Boutique,
-        as: 'boutiques',
-        attributes: ['id', 'localisation', 'telephone'],
-        required: false
       }
     ]
   };
