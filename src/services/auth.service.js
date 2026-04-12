@@ -22,67 +22,31 @@ class AuthService {
     role = 'Acheteur',
     boutique
   }) {
-
     const t = await sequelize.transaction();
 
     try {
-      console.log("🚀 [REGISTER] Début inscription");
-      console.log("📧 Email:", email);
-      console.log("📱 Téléphone:", telephone);
-      console.log("👤 Role:", role);
-      console.log("🔑 Password reçu:", mot_de_passe);
-
       const emailClean = email.trim().toLowerCase();
 
-      // 🔍 EMAIL CHECK
       const exist = await Utilisateur.findOne({
         where: { email: emailClean },
         transaction: t
       });
 
-      console.log("🔎 Email exist check:", !!exist);
-
       if (exist) {
-        console.log("❌ Email déjà utilisé");
         await t.rollback();
         return { success: false, message: "Cet email est déjà utilisé" };
       }
-
-      // 🔍 TELEPHONE CHECK
-      if (telephone) {
-        const telExist = await Utilisateur.findOne({
-          where: { telephone },
-          transaction: t
-        });
-
-        console.log("🔎 Tel exist check:", !!telExist);
-
-        if (telExist) {
-          console.log("❌ Téléphone déjà utilisé");
-          await t.rollback();
-          return { success: false, message: "Téléphone déjà utilisé" };
-        }
-      }
-
-      // 🔐 PASSWORD
-      console.log("🔐 Hash password start");
 
       const hashedPassword = await bcrypt.hash(
         mot_de_passe,
         bcryptConfig.saltRounds
       );
 
-      console.log("🔐 Hash password done");
-
-      // 🖼️ IMAGE
       let photoUrl = null;
       if (photoProfil?.buffer) {
-        console.log("🖼️ Upload photo profil...");
         photoUrl = await uploadImage(photoProfil.buffer);
       }
 
-      // 👤 CREATE USER
-      console.log("👤 Création utilisateur...");
       const utilisateur = await Utilisateur.create({
         nom,
         prenom,
@@ -94,38 +58,49 @@ class AuthService {
         role
       }, { transaction: t });
 
-      console.log("✅ Utilisateur créé ID:", utilisateur.id);
-
+      let abonnementData = null;
       let boutiqueCreated = null;
 
-      // ==============================
-      // VENDEUR LOGIC
-      // ==============================
       if (role === 'Vendeur') {
 
-        console.log("🏪 Création abonnement vendeur...");
-
-        const maintenant = new Date();
-        const finEssai = new Date();
-        finEssai.setMonth(finEssai.getMonth() + 3);
+        const dateDebut = new Date();
+        const dateFin = new Date();
+        dateFin.setMonth(dateFin.getMonth() + 3);
 
         const abonnement = await Abonnement.create({
           utilisateurId: utilisateur.id,
           type: 'essai',
-          dateDebut: maintenant,
-          dateFin: finEssai,
+          dateDebut,
+          dateFin,
           montant: 0
         }, { transaction: t });
 
-        console.log("📦 Abonnement créé ID:", abonnement.id);
+        abonnementData = {
+          id: abonnement.id,
+          type: abonnement.type,
+          statut: abonnement.statut,
+          dateDebut: abonnement.dateDebut,
+          dateFin: abonnement.dateFin,
+          montant: abonnement.montant
+        };
 
-        // 🏪 BOUTIQUE
         if (boutique) {
-          console.log("🏪 Création boutique...");
+          const existBoutique = await Boutique.findOne({
+            where: {
+              telephone: boutique.telephone
+            },
+            transaction: t
+          });
 
+          if (existBoutique) {
+            await t.rollback();
+            return {
+              success: false,
+              message: "Ce numéro de téléphone est déjà utilisé par une autre boutique"
+            };
+          }
           let logoUrl = null;
           if (boutique?.logo?.buffer) {
-            console.log("🖼️ Upload logo boutique...");
             logoUrl = await uploadImage(boutique.logo.buffer);
           }
 
@@ -139,31 +114,25 @@ class AuthService {
             logo: logoUrl,
             vendeurId: utilisateur.id
           }, { transaction: t });
-
-          console.log("🏪 Boutique créée ID:", boutiqueCreated.id);
         }
       }
 
-      // COMMIT
       await t.commit();
-      console.log("🎉 TRANSACTION COMMIT OK");
 
       return {
         success: true,
         message: "Inscription réussie",
         utilisateur,
+        abonnement: abonnementData,
         boutique: boutiqueCreated
       };
 
     } catch (err) {
-
-      console.error("❌ ERREUR REGISTER:", err);
-      console.error("📍 Stack:", err.stack);
-
       await t.rollback();
-      console.log("🔁 Transaction rollback effectuée");
-
-      throw err;
+      return {
+        success: false,
+        message: "Erreur serveur lors de l’inscription"
+      };
     }
   }
 
