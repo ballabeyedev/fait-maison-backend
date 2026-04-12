@@ -8,17 +8,6 @@ function includeVendeurActif(limitDate = new Date()) {
     attributes: ['id', 'nom', 'prenom', 'telephone', 'statut'],
     required: true,
     where: { statut: 'actif' },
-    include: [
-      {
-        model: Abonnement,
-        as: 'abonnements',
-        required: true,
-        where: {
-          statut: 'actif',
-          dateFin: { [Op.gte]: limitDate }
-        }
-      }
-    ]
   };
 }
 
