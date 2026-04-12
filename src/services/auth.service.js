@@ -1,4 +1,4 @@
-const { Utilisateur, Boutique, Abonnement} = require('../models');
+const { Utilisateur, Boutique, Abonnement } = require('../models');
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -8,6 +8,9 @@ const { uploadImage } = require('../middlewares/uploadService');
 
 class AuthService {
 
+  // ==============================
+  // REGISTER
+  // ==============================
   static async register({
     nom,
     prenom,
@@ -17,53 +20,65 @@ class AuthService {
     telephone,
     photoProfil,
     role = 'Acheteur',
-
     boutique
   }) {
 
     const t = await sequelize.transaction();
 
     try {
+      console.log("🚀 [REGISTER] Début inscription");
+      console.log("📧 Email:", email);
+      console.log("📱 Téléphone:", telephone);
+      console.log("👤 Role:", role);
+
       const emailClean = email.trim().toLowerCase();
 
-      // 🔍 Vérification email
+      // 🔍 EMAIL CHECK
       const exist = await Utilisateur.findOne({
         where: { email: emailClean },
         transaction: t
       });
 
+      console.log("🔎 Email exist check:", !!exist);
+
       if (exist) {
+        console.log("❌ Email déjà utilisé");
         await t.rollback();
         return { success: false, message: "Cet email est déjà utilisé" };
       }
 
-      // 🔍 Vérification téléphone
+      // 🔍 TELEPHONE CHECK
       if (telephone) {
         const telExist = await Utilisateur.findOne({
           where: { telephone },
           transaction: t
         });
 
+        console.log("🔎 Tel exist check:", !!telExist);
+
         if (telExist) {
+          console.log("❌ Téléphone déjà utilisé");
           await t.rollback();
           return { success: false, message: "Téléphone déjà utilisé" };
         }
       }
 
-      // 🔐 Hash mot de passe
+      // 🔐 PASSWORD
+      console.log("🔐 Hash password...");
       const hashedPassword = await bcrypt.hash(
         mot_de_passe,
         bcryptConfig.saltRounds
       );
 
-      // 🖼️ Upload photo
+      // 🖼️ IMAGE
       let photoUrl = null;
       if (photoProfil?.buffer) {
+        console.log("🖼️ Upload photo profil...");
         photoUrl = await uploadImage(photoProfil.buffer);
       }
 
-
-      // 👤 Création utilisateur
+      // 👤 CREATE USER
+      console.log("👤 Création utilisateur...");
       const utilisateur = await Utilisateur.create({
         nom,
         prenom,
@@ -75,15 +90,22 @@ class AuthService {
         role
       }, { transaction: t });
 
+      console.log("✅ Utilisateur créé ID:", utilisateur.id);
+
       let boutiqueCreated = null;
 
+      // ==============================
+      // VENDEUR LOGIC
+      // ==============================
       if (role === 'Vendeur') {
+
+        console.log("🏪 Création abonnement vendeur...");
 
         const maintenant = new Date();
         const finEssai = new Date();
         finEssai.setMonth(finEssai.getMonth() + 3);
 
-        await Abonnement.create({
+        const abonnement = await Abonnement.create({
           utilisateurId: utilisateur.id,
           type: 'essai',
           dateDebut: maintenant,
@@ -91,10 +113,15 @@ class AuthService {
           montant: 0
         }, { transaction: t });
 
+        console.log("📦 Abonnement créé ID:", abonnement.id);
+
+        // 🏪 BOUTIQUE
         if (boutique) {
-          // 🖼️ Upload logo boutique
+          console.log("🏪 Création boutique...");
+
           let logoUrl = null;
           if (boutique?.logo?.buffer) {
+            console.log("🖼️ Upload logo boutique...");
             logoUrl = await uploadImage(boutique.logo.buffer);
           }
 
@@ -108,10 +135,14 @@ class AuthService {
             logo: logoUrl,
             vendeurId: utilisateur.id
           }, { transaction: t });
+
+          console.log("🏪 Boutique créée ID:", boutiqueCreated.id);
         }
       }
 
+      // COMMIT
       await t.commit();
+      console.log("🎉 TRANSACTION COMMIT OK");
 
       return {
         success: true,
@@ -121,58 +152,88 @@ class AuthService {
       };
 
     } catch (err) {
+
+      console.error("❌ ERREUR REGISTER:", err);
+      console.error("📍 Stack:", err.stack);
+
       await t.rollback();
+      console.log("🔁 Transaction rollback effectuée");
+
       throw err;
     }
   }
 
-  // -------------------- CONNEXION --------------------
+  // ==============================
+  // LOGIN
+  // ==============================
   static async login({ identifiant, mot_de_passe }) {
-    const isEmail = /\S+@\S+\.\S+/.test(identifiant);
-    const utilisateur = await Utilisateur.findOne({
-      where: isEmail ? { email: identifiant } : { telephone: identifiant },
-    });
 
-    if (!utilisateur) 
-      return { 
-        success: false,
-        error: 'Identifiant ou mot de passe incorrect' 
-      };
-    
-    if (utilisateur.statut !== 'actif') {
+    try {
+      console.log("🔐 [LOGIN] Début login");
+      console.log("📧 Identifiant:", identifiant);
+
+      const isEmail = /\S+@\S+\.\S+/.test(identifiant);
+
+      const utilisateur = await Utilisateur.findOne({
+        where: isEmail ? { email: identifiant } : { telephone: identifiant },
+      });
+
+      console.log("👤 User trouvé:", !!utilisateur);
+
+      if (!utilisateur) {
+        console.log("❌ Utilisateur introuvable");
+        return {
+          success: false,
+          error: 'Identifiant ou mot de passe incorrect'
+        };
+      }
+
+      console.log("📌 Statut user:", utilisateur.statut);
+
+      if (utilisateur.statut !== 'actif') {
+        console.log("⛔ Compte inactif");
+        return {
+          success: false,
+          error: `Votre compte est ${utilisateur.statut}`
+        };
+      }
+
+      console.log("🔐 Vérification password...");
+      const valid = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
+
+      if (!valid) {
+        console.log("❌ Password incorrect");
+        return {
+          success: false,
+          message: 'Identifiant ou mot de passe incorrect'
+        };
+      }
+
+      console.log("✅ Auth OK");
+
+      const token = jwt.sign({
+        id: utilisateur.id,
+        nom: utilisateur.nom,
+        prenom: utilisateur.prenom,
+        email: utilisateur.email,
+        role: utilisateur.role,
+      }, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
+
+      console.log("🎟️ Token généré");
+
       return {
-        success: false,
-        error: `Votre compte est ${utilisateur.statut}. Veuillez contacter le support ou réactiver votre compte.`
+        success: true,
+        message: "Connexion réussie",
+        token,
+        utilisateur
       };
+
+    } catch (error) {
+      console.error("❌ ERREUR LOGIN:", error);
+      console.error("📍 Stack:", error.stack);
+      throw error;
     }
-
-    const valid = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
-    if (!valid) {
-      return {
-        success: false,
-        message: 'Identifiant ou mot de passe incorrect'
-      };
-    }
-
-    const token = jwt.sign({
-      id: utilisateur.id,
-      nom: utilisateur.nom,
-      prenom: utilisateur.prenom,
-      email: utilisateur.email,
-      adresse: utilisateur.adresse,
-      telephone: utilisateur.telephone,
-      photoProfil: utilisateur.photoProfil,
-      role: utilisateur.role,
-    }, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
-
-    return {
-      success: true, 
-      message: "Connexion réussie",
-      token, 
-      utilisateur 
-    };
   }
-
 }
 
 module.exports = AuthService;
