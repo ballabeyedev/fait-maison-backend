@@ -85,14 +85,14 @@ exports.login = async (req, res) => {
   }
 
   try {
-    const { token, utilisateur, error } = await AuthService.login({ identifiant, mot_de_passe });
+    const { token, utilisateur, abonnement, error } = await AuthService.login({ identifiant, mot_de_passe });
 
     if (error) return res.status(400).json({ message: error });
 
     return res.status(200).json({
       token,
       utilisateur: formatUser(utilisateur),
-      abonnement: result.abonnement,
+      abonnement
     });
   } catch (err) {
     console.error('Erreur connexion:', err);

@@ -180,8 +180,6 @@ class AuthService {
         };
       }
 
-      console.log("✅ Auth OK");
-
       const token = jwt.sign({
         id: utilisateur.id,
         nom: utilisateur.nom,
@@ -189,8 +187,6 @@ class AuthService {
         email: utilisateur.email,
         role: utilisateur.role,
       }, jwtConfig.secret, { expiresIn: jwtConfig.expiresIn });
-
-      console.log("🎟️ Token généré");
 
       return {
         success: true,
