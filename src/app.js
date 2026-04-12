@@ -15,6 +15,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(rateLimit(rateLimitConfig));
 app.use(require('morgan')('combined'));
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+
+app.use('/fait-maison-api', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 
 // Routes
 const authRoutes = require('./routes/auth.route');
