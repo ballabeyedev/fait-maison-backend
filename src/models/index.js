@@ -2,6 +2,7 @@ const Boutique = require('./boutique.model');
 const Utilisateur = require('./utilisateur.model');
 const Produit = require('./produit.model');
 const Categorie = require('./categorie.model');
+const Abonnement = require('./abonnement.model');
 
 Utilisateur.hasMany(Boutique, {
   foreignKey: 'vendeurId',
@@ -33,4 +34,17 @@ Produit.belongsTo(Categorie, {
     as: 'categorie' 
 });
 
-module.exports = { Utilisateur, Produit, Categorie, Boutique };
+
+// 🔗 USER - ABONNEMENT
+Utilisateur.hasMany(Abonnement, { 
+    foreignKey: 'utilisateurId', 
+    as: 'abonnements' 
+});
+
+Abonnement.belongsTo(Utilisateur, { 
+    foreignKey: 'utilisateurId', 
+    as: 'utilisateur' 
+});
+
+
+module.exports = { Utilisateur, Produit, Categorie, Boutique, Abonnement };

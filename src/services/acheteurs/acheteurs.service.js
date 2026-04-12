@@ -1,13 +1,108 @@
 const { Produit, Categorie, Utilisateur, Boutique } = require('../../models');
-const { Op, col, where } = require('sequelize');
+const { Op } = require('sequelize');
+const includeVendeurActif = require('../../utils/includeVendeurActif');
+
+const LIMIT = 15;
+
+// 🔥 HELPERS PROPRES
+const paginate = (page = 1) => ({
+  limit: LIMIT,
+  offset: (page - 1) * LIMIT
+});
+
+const buildVendeurInclude = () => {
+  const vendeur = includeVendeurActif();
+
+  return {
+    ...vendeur,
+    include: [...(vendeur.include || [])]
+  };
+};
 
 class AcheteurService {
 
-  // 1. Liste de tous les produits (publics, paginés)
-  static async listerTousProduits() {
-    const { count, rows } = await Produit.findAndCountAll({
+  // ==============================
+  // 1. PRODUITS
+  // ==============================
+  static async listerTousProduits(page = 1) {
+    const { limit, offset } = paginate(page);
+
+    const { rows, count } = await Produit.findAndCountAll({
+      limit,
+      offset,
+      distinct: true,
       where: {
-        quantite: { [Op.gt]: 0 } // Stock > 0
+        quantite: { [Op.gt]: 0 }
+      },
+      include: [
+        {
+          model: Categorie,
+          as: 'categorie',
+          attributes: ['id', 'nom']
+        },
+        buildVendeurInclude()
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    return {
+      produits: rows,
+      total: count,
+      page,
+      pages: Math.ceil(count / LIMIT)
+    };
+  }
+
+  // ==============================
+  // 2. RECHERCHE
+  // ==============================
+  static async rechercherProduits(query, page = 1) {
+    const { limit, offset } = paginate(page);
+
+    const { rows, count } = await Produit.findAndCountAll({
+      limit,
+      offset,
+      distinct: true,
+      where: {
+        quantite: { [Op.gt]: 0 },
+        [Op.or]: [
+          { nom: { [Op.iLike]: `%${query}%` } },
+          { '$categorie.nom$': { [Op.iLike]: `%${query}%` } }
+        ]
+      },
+      include: [
+        {
+          model: Categorie,
+          as: 'categorie',
+          attributes: ['id', 'nom']
+        },
+        buildVendeurInclude()
+      ],
+      order: [['nom', 'ASC']]
+    });
+
+    return {
+      produits: rows,
+      total: count,
+      page,
+      pages: Math.ceil(count / LIMIT)
+    };
+  }
+
+  // ==============================
+  // 3. FILTRE VILLE
+  // ==============================
+  static async filtrerParVille(ville, page = 1) {
+    const { limit, offset } = paginate(page);
+
+    const vendeur = includeVendeurActif();
+
+    const { rows, count } = await Produit.findAndCountAll({
+      limit,
+      offset,
+      distinct: true,
+      where: {
+        quantite: { [Op.gt]: 0 }
       },
       include: [
         {
@@ -16,15 +111,16 @@ class AcheteurService {
           attributes: ['id', 'nom']
         },
         {
-          model: Utilisateur,
-          as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom', 'telephone'],
+          ...vendeur,
           include: [
+            ...(vendeur.include || []),
             {
               model: Boutique,
               as: 'boutiques',
-              attributes: ['localisation'],
-              required: false
+              required: true,
+              where: {
+                localisation: { [Op.iLike]: `%${ville}%` }
+              }
             }
           ]
         }
@@ -33,85 +129,17 @@ class AcheteurService {
     });
 
     return {
-      produits: rows
-    };
-  }
-
-  // 2. Rechercher par nom ou catégorie
-static async rechercherProduits(query) {
-
-  const { count, rows } = await Produit.findAndCountAll({
-    where: {
-      quantite: { [Op.gt]: 0 },
-      [Op.or]: [
-        { nom: { [Op.iLike]: `%${query}%` } },
-        { '$categorie.nom$': { [Op.iLike]: `%${query}%` } }
-      ]
-    },
-    include: [
-      {
-        model: Categorie,
-        as: 'categorie',
-        attributes: ['nom'],
-        required: false
-      },
-      {
-        model: Utilisateur,
-        as: 'vendeur',
-        attributes: ['id', 'nom', 'prenom', 'telephone'],
-        include: [
-          { model: Boutique, as: 'boutiques', attributes: ['localisation'], required: false }
-        ]
-      }
-    ],
-    order: [['nom', 'ASC']],
-    distinct: true
-  });
-
-  return {
-    produits: rows
-  };
-}
-
-  // 3. Filtrer par ville (boutique.localisation)
-  static async filtrerParVille(ville) {
-    const { rows } = await Produit.findAndCountAll({
-      where: {
-        quantite: { [Op.gt]: 0 }
-      },
-      include: [
-        {
-          model: Categorie,
-          as: 'categorie',
-          attributes: ['nom']
-        },
-        {
-          model: Utilisateur,
-          as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom', 'telephone'],
-          required: true,
-          include: [
-            {
-              model: Boutique,
-              as: 'boutiques',
-              attributes: ['localisation'],
-              where: {
-                localisation: { [Op.iLike]: `%${ville}%` }
-              },
-              required: true
-            }
-          ]
-        }
-      ]
-    });
-
-    return {
       produits: rows,
-      ville
+      total: count,
+      page,
+      ville,
+      pages: Math.ceil(count / LIMIT)
     };
   }
 
-  // 4. Contact WhatsApp vendeur
+  // ==============================
+  // 4. WHATSAPP
+  // ==============================
   static async contacterVendeurWhatsapp(produitId) {
     const produit = await Produit.findByPk(produitId, {
       include: [
@@ -124,92 +152,99 @@ static async rechercherProduits(query) {
           model: Utilisateur,
           as: 'vendeur',
           attributes: ['telephone', 'nom', 'prenom'],
-          include: [{
-            model: Boutique,
-            as: 'boutiques',
-            attributes: ['telephone', 'localisation']
-          }]
+          include: [
+            {
+              model: Boutique,
+              as: 'boutiques',
+              attributes: ['telephone', 'localisation']
+            }
+          ]
         }
       ]
     });
 
-    if (!produit) {
-      throw new Error('Produit non trouvé');
-    }
+    if (!produit) throw new Error('Produit non trouvé');
 
-    // Priorité téléphone boutique → vendeur
-    let tel = produit.vendeur.boutiques?.[0]?.telephone || produit.vendeur.telephone;
+    let tel =
+      produit.vendeur.boutiques?.[0]?.telephone ||
+      produit.vendeur.telephone;
 
-    if (!tel) {
-      throw new Error('Téléphone vendeur non disponible');
-    }
+    if (!tel) throw new Error('Téléphone vendeur non disponible');
 
-    // Nettoyage numéro
     tel = tel.replace(/[^0-9]/g, '');
 
-    // Ajouter indicatif Sénégal si absent
     if (!tel.startsWith('221')) {
       tel = '221' + tel;
     }
 
-        // Message amélioré
-        const message = `
-          Bonjour ${produit.vendeur.nom  || ''} ${produit.vendeur.prenom  || ''},
+    const message = `
+Bonjour ${produit.vendeur.nom || ''} ${produit.vendeur.prenom || ''},
 
-          Je suis intéressé par votre produit :
+Je suis intéressé par votre produit :
 
-          🛍️ Nom : ${produit.nom}
-          💰 Prix : ${produit.prix} FCFA
-          📦 Stock : ${produit.quantite}
-          🏷️ Catégorie : ${produit.categorie?.nom || 'Non définie'}
-          📍 Localisation : ${produit.vendeur.boutiques?.[0]?.localisation || 'Non précisée'}
+🛍️ Nom : ${produit.nom}
+💰 Prix : ${produit.prix} FCFA
+📦 Stock : ${produit.quantite}
+🏷️ Catégorie : ${produit.categorie?.nom || 'Non définie'}
+📍 Localisation : ${produit.vendeur.boutiques?.[0]?.localisation || 'Non précisée'}
 
-            ${produit.description || ''}
+${produit.description || ''}
 
-          Merci de me donner plus d'informations.
-        `;
+Merci.
+`;
 
-    const text = encodeURIComponent(message);
-
-    return `https://wa.me/${tel}?text=${text}`;
+    return `https://wa.me/${tel}?text=${encodeURIComponent(message)}`;
   }
 
-  // 4. Liste de toutes les boutiques
-  static async listerBoutiques() {
-    const boutiques = await Boutique.findAll({
-      attributes: ['id', 'nom', 'description', 'localisation', 'telephone', 'logo', 'heure_ouverture', 'heure_fermeture'],
-      include: [
-        {
-          model: Utilisateur,
-          as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom', 'telephone']
-        }
+  // ==============================
+  // 5. BOUTIQUES
+  // ==============================
+  static async listerBoutiques(page = 1) {
+    const { limit, offset } = paginate(page);
+
+    const { rows, count } = await Boutique.findAndCountAll({
+      limit,
+      offset,
+      attributes: [
+        'id',
+        'nom',
+        'description',
+        'localisation',
+        'telephone',
+        'logo',
+        'heure_ouverture',
+        'heure_fermeture'
       ],
+      include: [buildVendeurInclude()],
       order: [['createdAt', 'DESC']]
     });
- 
-    return { boutiques };
+
+    return {
+      boutiques: rows,
+      total: count,
+      page,
+      pages: Math.ceil(count / LIMIT)
+    };
   }
 
-  static async getProduitsByBoutique(boutiqueId) {
-    const boutique = await Boutique.findByPk(boutiqueId, {
-      attributes: ['id', 'nom', 'description', 'localisation', 'logo',
-                   'heure_ouverture', 'heure_fermeture'],
-      include: [
-        {
-          model: Utilisateur,
-          as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom', 'telephone']
-        }
-      ]
-    });
- 
-    if (!boutique) {
-      throw new Error('Boutique introuvable');
-    }
- 
-    const { rows: produits } = await Produit.findAndCountAll({
-      where: { quantite: { [Op.gt]: 0 } },
+  // ==============================
+  // 6. PRODUITS PAR BOUTIQUE
+  // ==============================
+  static async getProduitsByBoutique(boutiqueId, page = 1) {
+    const { limit, offset } = paginate(page);
+
+    const boutique = await Boutique.findByPk(boutiqueId);
+
+    if (!boutique) throw new Error("Boutique introuvable");
+
+    const vendeur = includeVendeurActif();
+
+    const { rows, count } = await Produit.findAndCountAll({
+      limit,
+      offset,
+      where: {
+        quantite: { [Op.gt]: 0 }
+      },
       include: [
         {
           model: Categorie,
@@ -217,27 +252,29 @@ static async rechercherProduits(query) {
           attributes: ['id', 'nom']
         },
         {
-          model: Utilisateur,
-          as: 'vendeur',
-          attributes: ['id', 'nom', 'prenom'],
-          required: true,
+          ...vendeur,
           include: [
+            ...(vendeur.include || []),
             {
               model: Boutique,
               as: 'boutiques',
-              attributes: ['id', 'localisation'],
-              where: { id: boutiqueId },
-              required: true
+              required: true,
+              where: { id: boutiqueId }
             }
           ]
         }
       ],
       order: [['createdAt', 'DESC']]
     });
- 
-    return { boutique, produits };
-  }
 
+    return {
+      boutique,
+      produits: rows,
+      total: count,
+      page,
+      pages: Math.ceil(count / LIMIT)
+    };
+  }
 }
 
-module.exports = AcheteurService
+module.exports = AcheteurService;

@@ -2,12 +2,16 @@ const AcheteurService = require('../../services/acheteurs/acheteurs.service');
 
 class AcheteurController {
 
-  // 1. Liste tous les produits
+  // ==============================
+  // 1. LISTE PRODUITS (PAGINATION)
+  // ==============================
   static async listerProduits(req, res) {
     try {
-      const result = await AcheteurService.listerTousProduits();
+      const page = parseInt(req.query.page) || 1;
 
-      if (!result.produits.length) {
+      const result = await AcheteurService.listerTousProduits(page);
+
+      if (!result?.produits?.length) {
         return res.status(404).json({
           success: false,
           message: 'Aucun produit disponible pour le moment.'
@@ -29,21 +33,24 @@ class AcheteurController {
     }
   }
 
-  // 2. Rechercher produits par nom ou catégorie
+  // ==============================
+  // 2. RECHERCHE (PAGINATION)
+  // ==============================
   static async rechercherProduits(req, res) {
     try {
-      let { q } = req.query;
+      const page = parseInt(req.query.page) || 1;
+      const { q } = req.query;
 
-      if (!q || q.trim() === '') {
+      if (!q || !q.trim()) {
         return res.status(400).json({
           success: false,
           message: 'Le paramètre "q" est requis pour la recherche'
         });
       }
 
-      const result = await AcheteurService.rechercherProduits(q.trim());
+      const result = await AcheteurService.rechercherProduits(q.trim(), page);
 
-      if (!result.produits.length) {
+      if (!result?.produits?.length) {
         return res.status(404).json({
           success: false,
           message: `Aucun produit trouvé correspondant à "${q.trim()}".`
@@ -65,21 +72,24 @@ class AcheteurController {
     }
   }
 
-  // 3. Filtrer par ville
+  // ==============================
+  // 3. FILTRE VILLE (PAGINATION)
+  // ==============================
   static async filtrerParVille(req, res) {
     try {
-      let { ville } = req.query;
+      const page = parseInt(req.query.page) || 1;
+      const { ville } = req.query;
 
-      if (!ville || ville.trim() === '') {
+      if (!ville || !ville.trim()) {
         return res.status(400).json({
           success: false,
           message: 'Le paramètre "ville" est requis'
         });
       }
 
-      const result = await AcheteurService.filtrerParVille(ville.trim());
+      const result = await AcheteurService.filtrerParVille(ville.trim(), page);
 
-      if (!result.produits.length) {
+      if (!result?.produits?.length) {
         return res.status(404).json({
           success: false,
           message: `Aucun produit trouvé dans la ville "${ville.trim()}".`
@@ -101,30 +111,41 @@ class AcheteurController {
     }
   }
 
+  // ==============================
+  // 4. LISTE BOUTIQUES (PAGINATION)
+  // ==============================
   static async listerBoutiques(req, res) {
     try {
-      const result = await AcheteurService.listerBoutiques();
+      const page = parseInt(req.query.page) || 1;
+
+      const result = await AcheteurService.listerBoutiques(page);
+
       return res.status(200).json({
         success: true,
         ...result
       });
+
     } catch (error) {
+      console.error('❌ Erreur listerBoutiques:', error);
+
       return res.status(500).json({
         success: false,
-        message: error.message
+        message: 'Erreur serveur lors de la récupération des boutiques'
       });
     }
   }
 
-  // 4. WhatsApp vendeur pour produit
+  // ==============================
+  // 5. WHATSAPP VENDEUR
+  // ==============================
   static async contacterVendeurWhatsapp(req, res) {
     try {
       const { id } = req.params;
 
-      if (!id) {
+      if (!id || isNaN(id)) {
         return res.status(400).json({
           success: false,
-          message: 'Paramètre id requis'
+          message: 'Paramètre id invalide'
         });
       }
 
@@ -136,53 +157,60 @@ class AcheteurController {
         whatsappUrl
       });
 
-    } catch (err) {
-      console.error('❌ Erreur WhatsApp:', err);
+    } catch (error) {
+      console.error('❌ Erreur WhatsApp:', error);
 
-      const statusCode = err.message === 'Produit non trouvé' || err.message.includes('Téléphone') ? 404 : 500;
+      const statusCode =
+        error.message === 'Produit non trouvé' ||
+        error.message.includes('Téléphone')
+          ? 404
+          : 500;
 
       return res.status(statusCode).json({
         success: false,
-        message: err.message || 'Erreur serveur lors de la génération du lien WhatsApp'
+        message: error.message || 'Erreur serveur lors de la génération du lien WhatsApp'
       });
     }
   }
 
-  // 5. Lister les produits d'une boutique spécifique
-static async getProduitsByBoutique(req, res) {
-  try {
-    const { boutiqueId } = req.params;
+  // ==============================
+  // 6. PRODUITS PAR BOUTIQUE
+  // ==============================
+  static async getProduitsByBoutique(req, res) {
+    try {
+      const page = parseInt(req.query.page) || 1;
+      const { boutiqueId } = req.params;
 
-    if (!boutiqueId) {
-      return res.status(400).json({
+      if (!boutiqueId || isNaN(boutiqueId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Paramètre boutiqueId invalide'
+        });
+      }
+
+      const result = await AcheteurService.getProduitsByBoutique(boutiqueId, page);
+
+      if (!result?.produits?.length) {
+        return res.status(404).json({
+          success: false,
+          message: `Aucun produit trouvé pour la boutique "${result?.boutique?.nom}".`
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        ...result
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur getProduitsByBoutique:', error);
+
+      return res.status(500).json({
         success: false,
-        message: 'Paramètre boutiqueId requis'
+        message: error.message || 'Erreur serveur lors de la récupération des produits'
       });
     }
-
-    const result = await AcheteurService.getProduitsByBoutique(boutiqueId);
-
-    if (!result.produits.length) {
-      return res.status(404).json({
-        success: false,
-        message: `Aucun produit trouvé pour la boutique "${result.boutique.nom}".`
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      ...result
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur getProduitsByBoutique:', error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Erreur serveur lors de la récupération des produits de la boutique'
-    });
   }
-}
 }
 
 module.exports = AcheteurController;

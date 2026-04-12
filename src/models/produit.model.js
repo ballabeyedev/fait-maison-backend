@@ -27,7 +27,7 @@ const Produit = sequelize.define('Produit', {
     defaultValue: 0
   },
   image: {
-    type: DataTypes.TEXT('long'),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   vendeurId: {

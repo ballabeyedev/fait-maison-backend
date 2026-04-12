@@ -33,7 +33,7 @@ const Boutique = sequelize.define('Boutique', {
     unique: true
   },
    logo: {
-    type: DataTypes.TEXT('long'),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   vendeurId: {

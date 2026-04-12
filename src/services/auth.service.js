@@ -1,4 +1,4 @@
-const { Utilisateur, Boutique} = require('../models');
+const { Utilisateur, Boutique, Abonnement} = require('../models');
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -77,24 +77,38 @@ class AuthService {
 
       let boutiqueCreated = null;
 
-      if (role === 'Vendeur' && boutique) {
+      if (role === 'Vendeur') {
 
-        // 🖼️ Upload logo boutique
-        let logoUrl = null;
-        if (boutique?.logo?.buffer) {
-          logoUrl = await uploadImage(boutique.logo.buffer);
-        }
+        const maintenant = new Date();
+        const finEssai = new Date();
+        finEssai.setMonth(finEssai.getMonth() + 3);
 
-        boutiqueCreated = await Boutique.create({
-          nom: boutique.nom,
-          description: boutique.description,
-          localisation: boutique.localisation,
-          heure_ouverture: boutique.heure_ouverture,
-          heure_fermeture: boutique.heure_fermeture,
-          telephone: boutique.telephone,
-          logo: logoUrl,
-          vendeurId: utilisateur.id
+        await Abonnement.create({
+          utilisateurId: utilisateur.id,
+          type: 'essai',
+          dateDebut: maintenant,
+          dateFin: finEssai,
+          montant: 0
         }, { transaction: t });
+
+        if (boutique) {
+          // 🖼️ Upload logo boutique
+          let logoUrl = null;
+          if (boutique?.logo?.buffer) {
+            logoUrl = await uploadImage(boutique.logo.buffer);
+          }
+
+          boutiqueCreated = await Boutique.create({
+            nom: boutique.nom,
+            description: boutique.description,
+            localisation: boutique.localisation,
+            heure_ouverture: boutique.heure_ouverture,
+            heure_fermeture: boutique.heure_fermeture,
+            telephone: boutique.telephone,
+            logo: logoUrl,
+            vendeurId: utilisateur.id
+          }, { transaction: t });
+        }
       }
 
       await t.commit();
@@ -153,6 +167,7 @@ class AuthService {
 
     return {
       success: true, 
+      message: "Connexion réussie",
       token, 
       utilisateur 
     };

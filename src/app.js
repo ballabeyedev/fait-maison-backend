@@ -34,4 +34,7 @@ app.use('/faitMaison/vendeur', vendeurRoutes);
 app.use('/faitMaison/acheteurs', acheteursRoutes); 
 app.use('/faitMaison/admin', adminRoutes);
 
+const startJobs = require('./jobs');
+startJobs();
+
 module.exports = app;
