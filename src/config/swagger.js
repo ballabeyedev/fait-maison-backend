@@ -9,12 +9,12 @@ const options = {
       description: 'Documentation API pour les développeurs',
     },
     servers: [
-      {
-        url: 'https://fait-maison-backend.onrender.com',
-      },
-      {
-        url: 'http://localhost:9000',
-      }
+    {
+        url: 'https://fait-maison-backend.onrender.com/faitMaison',
+    },
+    {
+        url: 'http://localhost:9000/faitMaison',
+    }
     ],
     components: {
       securitySchemes: {
