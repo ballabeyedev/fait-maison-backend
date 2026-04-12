@@ -76,26 +76,32 @@ exports.inscriptionUser = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, telephone, mot_de_passe } = req.body;
-  
-  // Choisir identifiant : email ou téléphone
+
   const identifiant = email || telephone;
-  
+
   if (!identifiant || !mot_de_passe) {
-    return res.status(400).json({ message: 'Email/Téléphone et mot de passe sont obligatoires' });
+    return res.status(400).json({
+      message: 'Email/Téléphone et mot de passe sont obligatoires'
+    });
   }
 
   try {
-    const { token, utilisateur, abonnement, error } = await AuthService.login({ identifiant, mot_de_passe });
+    const { token, utilisateur, abonnement, error } =
+      await AuthService.login({ identifiant, mot_de_passe });
 
-    if (error) return res.status(400).json({ message: error });
+    if (error) {
+      return res.status(400).json({ message: error });
+    }
 
     return res.status(200).json({
       token,
       utilisateur: formatUser(utilisateur),
       abonnement
     });
+
   } catch (err) {
     console.error('Erreur connexion:', err);
+
     return res.status(500).json({
       message: 'Erreur serveur',
       erreur: err.message
