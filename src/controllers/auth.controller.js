@@ -60,6 +60,7 @@ exports.inscriptionUser = async (req, res) => {
     return res.status(201).json({
       message: result.message,
       utilisateur: formatUser(result.utilisateur),
+      abonnement: result.abonnement,
       boutique: result.boutique 
     });
 
@@ -90,7 +91,8 @@ exports.login = async (req, res) => {
 
     return res.status(200).json({
       token,
-      utilisateur: formatUser(utilisateur)
+      utilisateur: formatUser(utilisateur),
+      abonnement: result.abonnement,
     });
   } catch (err) {
     console.error('Erreur connexion:', err);

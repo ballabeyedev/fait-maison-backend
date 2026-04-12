@@ -142,40 +142,38 @@ class AuthService {
   static async login({ identifiant, mot_de_passe }) {
 
     try {
-      console.log("🔐 [LOGIN] Début login");
-      console.log("📧 Identifiant:", identifiant);
 
       const isEmail = /\S+@\S+\.\S+/.test(identifiant);
 
       const utilisateur = await Utilisateur.findOne({
         where: isEmail ? { email: identifiant } : { telephone: identifiant },
+        include: [
+          {
+            model: Abonnement,
+            as: 'abonnements',
+            required: false
+          }
+        ],
+        order: [[{ model: Abonnement, as: 'abonnements' }, 'createdAt', 'DESC']]
       });
 
-      console.log("👤 User trouvé:", !!utilisateur);
-
       if (!utilisateur) {
-        console.log("❌ Utilisateur introuvable");
         return {
           success: false,
           error: 'Identifiant ou mot de passe incorrect'
         };
       }
 
-      console.log("📌 Statut user:", utilisateur.statut);
-
       if (utilisateur.statut !== 'actif') {
-        console.log("⛔ Compte inactif");
         return {
           success: false,
           error: `Votre compte est ${utilisateur.statut}`
         };
       }
 
-      console.log("🔐 Vérification password...");
       const valid = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
 
       if (!valid) {
-        console.log("❌ Password incorrect");
         return {
           success: false,
           message: 'Identifiant ou mot de passe incorrect'
@@ -198,7 +196,8 @@ class AuthService {
         success: true,
         message: "Connexion réussie",
         token,
-        utilisateur
+        utilisateur,
+        abonnement: utilisateur.abonnements?.[0] || null,
       };
 
     } catch (error) {
