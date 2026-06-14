@@ -1,0 +1,122 @@
+const { Resend } = require('resend');
+const logger = require('../utils/logger');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = process.env.MAIL_FROM || 'Fait Maison <onboarding@resend.dev>';
+const isProd = process.env.NODE_ENV === 'production';
+
+/**
+ * Envoi générique — base de tous les helpers.
+ * @param {{ to: string|string[], subject: string, html: string, attachments?: Array }} opts
+ */
+async function sendEmail({ to, subject, html, attachments = [] }) {
+  const formattedAttachments = attachments.map(att => ({
+    filename: att.filename,
+    content: att.content   // Buffer ou base64
+  }));
+
+  const payload = {
+    from: FROM,
+    to,
+    subject,
+    html,
+    ...(formattedAttachments.length > 0 && { attachments: formattedAttachments })
+  };
+
+  const { data, error } = await resend.emails.send(payload);
+
+  if (error) {
+    logger.error('resend:send', { error });
+    throw new Error(error.message);
+  }
+
+  const dest = Array.isArray(to) ? to[0] : to;
+  if (isProd) {
+    logger.info('resend:sent', { domain: dest.split('@')[1] ?? '?', subject });
+  } else {
+    logger.info(`[resend][dev] → ${dest} | ${subject} (id: ${data?.id})`);
+  }
+
+  return data;
+}
+
+/**
+ * Email OTP de réinitialisation de mot de passe
+ */
+async function sendOtpEmail({ to, nom, otp }) {
+  const template = require('../templates/mail/otpPassword.template');
+  return sendEmail({
+    to,
+    subject: 'Votre code de réinitialisation — Fait Maison',
+    html: template({ nom, otp })
+  });
+}
+
+/**
+ * Email de bienvenue à l'inscription (Vendeur ou Acheteur)
+ */
+async function sendWelcomeEmail({ to, nom, prenom, role }) {
+  const template = require('../templates/mail/welcome.template');
+  return sendEmail({
+    to,
+    subject: 'Bienvenue sur Fait Maison 🍽️',
+    html: template({ nom, prenom, role })
+  });
+}
+
+/**
+ * Confirmation de paiement / activation abonnement (Vendeur)
+ */
+async function sendAbonnementConfirme({ to, nom, montant, dateDebut, dateFin }) {
+  const template = require('../templates/mail/abonnementConfirme.template');
+  return sendEmail({
+    to,
+    subject: '✅ Votre abonnement Fait Maison est actif',
+    html: template({ nom, montant, dateDebut, dateFin })
+  });
+}
+
+/**
+ * Rappel d'expiration d'abonnement (envoyé par le cron job)
+ */
+async function sendAbonnementExpiration({ to, nom, dateFin, joursRestants }) {
+  const template = require('../templates/mail/abonnementExpiration.template');
+  const emoji = joursRestants <= 3 ? '🚨' : '⏰';
+  return sendEmail({
+    to,
+    subject: `${emoji} Votre abonnement expire dans ${joursRestants} jour${joursRestants > 1 ? 's' : ''}`,
+    html: template({ nom, dateFin, joursRestants })
+  });
+}
+
+// MED-03 : email de vérification à l'inscription
+async function sendVerificationEmail({ to, nom, code }) {
+  const template = require('../templates/mail/verificationEmail.template');
+  return sendEmail({
+    to,
+    subject: '✅ Vérifiez votre adresse email — Fait Maison',
+    html: template({ nom, code })
+  });
+}
+
+/**
+ * Email d'accueil pour un nouvel administrateur créé par le super admin
+ */
+async function sendNewAdminEmail({ to, nom, prenom, email, password }) {
+  const template = require('../templates/mail/newAdmin.template');
+  return sendEmail({
+    to,
+    subject: 'Vos accès administrateur — Fait Maison',
+    html: template({ nom, prenom, email, password }),
+  });
+}
+
+module.exports = {
+  sendEmail,
+  sendOtpEmail,
+  sendWelcomeEmail,
+  sendAbonnementConfirme,
+  sendAbonnementExpiration,
+  sendVerificationEmail,
+  sendNewAdminEmail,
+};

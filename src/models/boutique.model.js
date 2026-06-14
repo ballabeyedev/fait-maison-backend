@@ -36,6 +36,22 @@ const Boutique = sequelize.define('Boutique', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  whatsapp: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  ville: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  latitude: {
+    type: DataTypes.DECIMAL(10, 8),
+    allowNull: true,
+  },
+  longitude: {
+    type: DataTypes.DECIMAL(11, 8),
+    allowNull: true,
+  },
   vendeurId: {
     type: DataTypes.UUID,
     allowNull: false,

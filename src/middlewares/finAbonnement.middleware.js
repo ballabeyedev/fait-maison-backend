@@ -1,5 +1,6 @@
 const Abonnement = require('../models/abonnement.model');
 const { Op } = require('sequelize');
+const logger = require('../utils/logger');
 
 async function checkAbonnement(req, res, next) {
   try {
@@ -40,10 +41,8 @@ async function checkAbonnement(req, res, next) {
     next();
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "Erreur serveur"
-    });
+    logger.error('finAbonnement.middleware', { message: error.message });
+    return res.status(500).json({ message: 'Erreur serveur interne.' });
   }
 }
 

@@ -30,6 +30,22 @@ const Produit = sequelize.define('Produit', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  delai_preparation: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  disponible: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
+  vues: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  statut: {
+    type: DataTypes.ENUM('en_attente', 'approuve', 'rejete'),
+    defaultValue: 'approuve',
+  },
   vendeurId: {
     type: DataTypes.UUID,
     allowNull: false,
@@ -54,7 +70,14 @@ const Produit = sequelize.define('Produit', {
   tableName: 'produit',
   timestamps: true,
   paranoid: true,
-  underscored: true
+  underscored: true,
+  // MED-08 : index sur les colonnes de recherche fréquentes
+  indexes: [
+    { fields: ['vendeur_id'] },
+    { fields: ['categorie_id'] },
+    { fields: ['disponible'] },
+    { fields: ['vues'] },
+  ]
 });
 
 module.exports = Produit;

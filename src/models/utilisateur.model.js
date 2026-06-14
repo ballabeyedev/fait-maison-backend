@@ -27,7 +27,7 @@ const User = sequelize.define('User', {
   },
   adresse: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true, // LOW-06 : cohérence avec le validator (champ optionnel)
   },
   telephone: {
     type: DataTypes.STRING,
@@ -48,12 +48,20 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('actif', 'inactif'),
     defaultValue: 'actif'
   },
-
+  verifie: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  isFirstLogin: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    allowNull: false,
+  },
 
 }, {
   tableName: 'utilisateur',
   timestamps: true,
-  paranoid: true, 
+  paranoid: true,
   underscored: true
 });
 

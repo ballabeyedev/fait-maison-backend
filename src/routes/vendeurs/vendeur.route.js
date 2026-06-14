@@ -3,7 +3,8 @@ const router = express.Router();
 const VendeurController = require('../../controllers/vendeurs/vendeur.controller');
 const authMiddleware = require('../../middlewares/auth.middleware');
 const checkActiveUser = require('../../middlewares/checkActiveUser.middleware');
-const isVendeur = require('../../middlewares/isVendeur.middleware'); 
+const isVendeur = require('../../middlewares/isVendeur.middleware');
+const finAbonnement = require('../../middlewares/finAbonnement.middleware');
 const multer = require('multer');
 
 const storage = multer.memoryStorage();
@@ -66,7 +67,9 @@ router.get('/liste-produits', VendeurController.listerProduits);
  */
 router.post(
   '/ajout-produit',
+  finAbonnement,
   upload.single('image'),
+  upload.verifyMagicBytes,
   VendeurController.ajouterProduit
 );
 
@@ -109,7 +112,9 @@ router.post(
  */
 router.put(
   '/modifier-produit/:id',
+  finAbonnement,
   upload.single('image'),
+  upload.verifyMagicBytes,
   VendeurController.modifierProduit
 );
 
@@ -133,6 +138,7 @@ router.put(
  */
 router.delete(
   '/supprimer-produit/:id',
+  finAbonnement,
   VendeurController.supprimerProduit
 );
 
@@ -163,5 +169,46 @@ router.get('/nombre-produit', VendeurController.nombreProduits);
  *         description: Statistiques par catégorie
  */
 router.get('/nombre-produit-categorie', VendeurController.produitsParCategorie);
+
+// -------------------- BOUTIQUE --------------------
+router.get('/ma-boutique', VendeurController.maBoutique);
+router.post('/creer-boutique', upload.single('logo'), VendeurController.creerBoutique);
+router.put('/modifier-boutique', upload.single('logo'), VendeurController.modifierBoutique);
+
+// -------------------- ABONNEMENT --------------------
+router.get('/mon-abonnement', VendeurController.monAbonnement);
+router.post('/initier-renouvellement', VendeurController.initierRenouvellement);
+
+// -------------------- STATISTIQUES VUES --------------------
+router.get('/statistiques-vues', VendeurController.statistiquesVues);
+
+// -------------------- DASHBOARD --------------------
+router.get('/dashboard', VendeurController.dashboard);
+
+// -------------------- STATISTIQUES AVANCÉES --------------------
+router.get('/statistiques', VendeurController.statistiquesAvancees);
+
+// -------------------- MES AVIS --------------------
+router.get('/mes-avis', VendeurController.mesAvis);
+router.post('/avis/:avisId/repondre', VendeurController.repondreAvis);
+
+// -------------------- DISPONIBILITÉ RAPIDE --------------------
+router.patch('/produit/:id/disponibilite', finAbonnement, VendeurController.toggleDisponibilite);
+
+// -------------------- DUPLIQUER PRODUIT --------------------
+router.post('/produit/:id/dupliquer', finAbonnement, VendeurController.dupliquerProduit);
+
+// -------------------- RECHERCHE PRODUITS --------------------
+router.get('/recherche-produits', VendeurController.rechercherMesProduits);
+
+// -------------------- MODE PAUSE BOUTIQUE --------------------
+router.patch('/boutique/pause', VendeurController.pauseBoutique);
+router.patch('/boutique/reactiver', VendeurController.reactiverBoutique);
+
+// -------------------- HISTORIQUE PAIEMENTS --------------------
+router.get('/historique-paiements', VendeurController.historiquePaiements);
+
+// -------------------- MES CONVERSATIONS --------------------
+router.get('/mes-conversations', VendeurController.mesConversations);
 
 module.exports = router;

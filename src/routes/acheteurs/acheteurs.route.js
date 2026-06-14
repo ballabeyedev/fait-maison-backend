@@ -128,4 +128,34 @@ router.get(
   AcheteurController.getProduitsByBoutique
 );
 
+router.post('/produit/:id/vue', AcheteurController.incrementerVues);
+router.get('/produit/:id', AcheteurController.getDetailProduit);
+router.get('/boutique/:id', AcheteurController.getDetailBoutique);
+router.get('/boutiques-proches', AcheteurController.boutiquesProches);
+
+// -------------------- ACCUEIL --------------------
+router.get('/accueil', AcheteurController.accueil);
+
+// -------------------- TABLEAU DE BORD --------------------
+router.get('/mon-tableau-de-bord', AcheteurController.monTableauDeBord);
+
+// -------------------- FILTRES AVANCÉS --------------------
+router.get('/produits', AcheteurController.listerProduitsAvecFiltres);
+
+// -------------------- TENDANCE & DÉCOUVERTE --------------------
+router.get('/produits-tendance', AcheteurController.produitsTendance);
+router.get('/nouvelles-boutiques', AcheteurController.nouvellesBoutiques);
+router.get('/boutiques-verifiees', AcheteurController.boutiquesVerifiees);
+router.get('/promotions-actives', AcheteurController.promotionsActives);
+
+// -------------------- RECHERCHE GLOBALE --------------------
+router.get('/recherche', AcheteurController.rechercheGlobale);
+
+// -------------------- MES AVIS --------------------
+router.get('/mes-avis', AcheteurController.mesAvis);
+router.put('/avis/:id', AcheteurController.modifierAvis);
+
+// -------------------- MES CONVERSATIONS --------------------
+router.get('/mes-conversations', AcheteurController.mesConversations);
+
 module.exports = router;

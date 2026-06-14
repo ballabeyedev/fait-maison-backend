@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { changerMotDePasse } = require('../controllers/authPassword.controller');
 const upload = require('../middlewares/upload.middleware');
+const authMiddleware = require('../middlewares/auth.middleware');
+const validate = require('../middlewares/validate.middleware');
+const { registerSchema, loginSchema } = require('../validators/auth.validator');
 
 /**
  * @swagger
@@ -68,6 +72,8 @@ router.post(
     { name: 'photoProfil', maxCount: 1 },
     { name: 'logo', maxCount: 1 },
   ]),
+  upload.verifyMagicBytes,
+  validate(registerSchema),
   authController.inscriptionUser
 );
 
@@ -75,7 +81,7 @@ router.post(
  * @swagger
  * /auth/login:
  *   post:
- *     summary: Connexion utilisateur
+ *     summary: Connexion utilisateur faut choisir entre email ou telephone
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -99,6 +105,16 @@ router.post(
  *       400:
  *         description: Identifiant incorrect
  */
-router.post('/login', authController.login);
+router.post('/login', validate(loginSchema), authController.login);
+
+router.post('/logout', authMiddleware, authController.logout);
+
+router.post('/refresh', authController.refresh);
+
+// MED-03 : vérification email — GET /faitMaison/auth/verify-email?email=x&code=y
+router.get('/verify-email', authController.verifierEmail);
+
+// RBAC : changement de mot de passe (première connexion ou volontaire)
+router.post('/changer-mot-de-passe', authMiddleware, changerMotDePasse);
 
 module.exports = router;

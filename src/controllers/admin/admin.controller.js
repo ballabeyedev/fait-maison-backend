@@ -132,3 +132,270 @@ exports.ajoutCategorie = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
+
+// -------------------- SUSPENDRE VENDEUR --------------------
+exports.suspendreVendeur = async (req, res) => {
+  try {
+    const result = await AdminService.suspendreVendeur(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur suspendreVendeur:', error);
+    return res.status(error.message === 'Vendeur introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- ACTIVER VENDEUR --------------------
+exports.activerVendeur = async (req, res) => {
+  try {
+    const result = await AdminService.activerVendeur(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur activerVendeur:', error);
+    return res.status(error.message === 'Vendeur introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- SUSPENDRE ACHETEUR --------------------
+exports.suspendreAcheteur = async (req, res) => {
+  try {
+    const result = await AdminService.suspendreAcheteur(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur suspendreAcheteur:', error);
+    return res.status(error.message === 'Acheteur introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- LISTE ABONNEMENTS --------------------
+exports.getAbonnements = async (req, res) => {
+  try {
+    const result = await AdminService.getAbonnements();
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur getAbonnements:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// -------------------- STATS GLOBALES --------------------
+exports.getStatsGlobales = async (req, res) => {
+  try {
+    const result = await AdminService.getStatsGlobales();
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur getStatsGlobales:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// -------------------- APPROUVER PRODUIT --------------------
+exports.approuverProduit = async (req, res) => {
+  try {
+    const result = await AdminService.approuverProduit(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur approuverProduit:', error);
+    return res.status(error.message === 'Produit introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- REJETER PRODUIT --------------------
+exports.rejeterProduit = async (req, res) => {
+  try {
+    const result = await AdminService.rejeterProduit(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur rejeterProduit:', error);
+    return res.status(error.message === 'Produit introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- SUPPRIMER PRODUIT --------------------
+exports.supprimerProduit = async (req, res) => {
+  try {
+    const result = await AdminService.supprimerProduit(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur supprimerProduit:', error);
+    return res.status(error.message === 'Produit introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- SUPPRIMER BOUTIQUE --------------------
+exports.supprimerBoutique = async (req, res) => {
+  try {
+    const result = await AdminService.supprimerBoutique(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur supprimerBoutique:', error);
+    return res.status(error.message === 'Boutique introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- VÉRIFIER VENDEUR --------------------
+exports.verifierVendeur = async (req, res) => {
+  try {
+    const result = await AdminService.verifierVendeur(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur verifierVendeur:', error);
+    return res.status(error.message === 'Vendeur introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- SIGNALEMENTS --------------------
+exports.getSignalements = async (req, res) => {
+  try {
+    const result = await AdminService.getSignalements();
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur getSignalements:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+exports.traiterSignalement = async (req, res) => {
+  try {
+    const result = await AdminService.traiterSignalement(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur traiterSignalement:', error);
+    return res.status(error.message === 'Signalement introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+exports.rejeterSignalement = async (req, res) => {
+  try {
+    const result = await AdminService.rejeterSignalement(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur rejeterSignalement:', error);
+    return res.status(error.message === 'Signalement introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- KPIs --------------------
+
+exports.revenusParMois = async (req, res) => {
+  try {
+    const result = await AdminService.revenusParMois(req.query.annee);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur revenusParMois:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+exports.inscriptionsMensuelles = async (req, res) => {
+  try {
+    const result = await AdminService.inscriptionsMensuelles(req.query.annee);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur inscriptionsMensuelles:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+exports.abonnementsExpirationProche = async (req, res) => {
+  try {
+    const result = await AdminService.abonnementsExpirationProche(req.query.jours);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur abonnementsExpirationProche:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// -------------------- PAIEMENTS --------------------
+
+exports.tousLesPaiements = async (req, res) => {
+  try {
+    const result = await AdminService.tousLesPaiements(req.query);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur tousLesPaiements:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+exports.paiementsEchoues = async (req, res) => {
+  try {
+    const result = await AdminService.paiementsEchoues();
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur paiementsEchoues:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// -------------------- ABONNEMENT MANUEL --------------------
+
+exports.abonnementManuel = async (req, res) => {
+  try {
+    const result = await AdminService.abonnementManuel(req.params.vendeurId, req.user.id);
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error('Erreur abonnementManuel:', error);
+    return res.status(error.message === 'Vendeur introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+exports.revoquerAbonnement = async (req, res) => {
+  try {
+    const result = await AdminService.revoquerAbonnement(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur revoquerAbonnement:', error);
+    return res.status(error.message === 'Abonnement introuvable' ? 404 : 500).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- CATÉGORIES --------------------
+
+exports.modifierCategorie = async (req, res) => {
+  try {
+    const result = await AdminService.modifierCategorie(req.params.id, req.body);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur modifierCategorie:', error);
+    const status = error.message.includes('introuvable') ? 404 : error.message.includes('déjà utilisé') ? 409 : 500;
+    return res.status(status).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+exports.supprimerCategorie = async (req, res) => {
+  try {
+    const result = await AdminService.supprimerCategorie(req.params.id);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur supprimerCategorie:', error);
+    const status = error.message.includes('introuvable') ? 404 : error.message.includes('Impossible') ? 409 : 500;
+    return res.status(status).json({ message: error.message || 'Erreur serveur' });
+  }
+};
+
+// -------------------- NOTIFICATION BROADCAST --------------------
+
+exports.notificationGlobale = async (req, res) => {
+  try {
+    const { titre, message, type, cible } = req.body;
+    if (!titre || !message) return res.status(400).json({ message: 'titre et message sont requis' });
+    const result = await AdminService.notificationGlobale({ titre, message, type, cible });
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error('Erreur notificationGlobale:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// -------------------- MODÉRATION AVANCÉE --------------------
+
+exports.produitsEnAttente = async (req, res) => {
+  try {
+    const result = await AdminService.produitsEnAttente();
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur produitsEnAttente:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};

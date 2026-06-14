@@ -1,7 +1,7 @@
-const Utilisateur = require('../../models/utilisateur.model');
-const Produit = require('../../models/produit.model');
-const Categorie = require('../../models/categorie.model');
-const { Op } = require('sequelize');
+const { Utilisateur, Produit, Categorie, Abonnement, Paiement, Boutique, Signalement, Notification } = require('../../models');
+const logger = require('../../utils/logger');
+const { Op, fn, col, literal } = require('sequelize');
+const sequelize = require('../../config/db');
 
 class AdminService {
 
@@ -169,6 +169,324 @@ static async creerCategorie(data) {
     throw error;
   }
 }
+
+  // 8. Suspendre un vendeur
+  static async suspendreVendeur(vendeurId) {
+    const vendeur = await Utilisateur.findOne({ where: { id: vendeurId, role: 'Vendeur' } });
+    if (!vendeur) throw new Error('Vendeur introuvable');
+    await vendeur.update({ statut: 'inactif' });
+    return { message: 'Vendeur suspendu avec succès' };
+  }
+
+  // 9. Activer un vendeur
+  static async activerVendeur(vendeurId) {
+    const vendeur = await Utilisateur.findOne({ where: { id: vendeurId, role: 'Vendeur' } });
+    if (!vendeur) throw new Error('Vendeur introuvable');
+    await vendeur.update({ statut: 'actif' });
+    return { message: 'Vendeur activé avec succès' };
+  }
+
+  // 10. Suspendre un acheteur
+  static async suspendreAcheteur(acheteurId) {
+    const acheteur = await Utilisateur.findOne({ where: { id: acheteurId, role: 'Acheteur' } });
+    if (!acheteur) throw new Error('Acheteur introuvable');
+    await acheteur.update({ statut: 'inactif' });
+    return { message: 'Acheteur suspendu avec succès' };
+  }
+
+  // 11. Lister les abonnements
+  static async getAbonnements() {
+    const abonnements = await Abonnement.findAll({
+      include: [{ model: Utilisateur, as: 'utilisateur', attributes: { exclude: ['mot_de_passe'] } }],
+      order: [['createdAt', 'DESC']]
+    });
+    return { message: 'Liste des abonnements', abonnements };
+  }
+
+  // 13. Approuver un produit
+  static async approuverProduit(produitId) {
+    const produit = await Produit.findByPk(produitId);
+    if (!produit) throw new Error('Produit introuvable');
+    await produit.update({ statut: 'approuve' });
+    return { message: 'Produit approuvé avec succès' };
+  }
+
+  // 14. Rejeter un produit
+  static async rejeterProduit(produitId) {
+    const produit = await Produit.findByPk(produitId);
+    if (!produit) throw new Error('Produit introuvable');
+    await produit.update({ statut: 'rejete' });
+    return { message: 'Produit rejeté avec succès' };
+  }
+
+  // 15. Supprimer un produit
+  static async supprimerProduit(produitId) {
+    const produit = await Produit.findByPk(produitId);
+    if (!produit) throw new Error('Produit introuvable');
+    await produit.destroy({ force: true });
+    return { message: 'Produit supprimé avec succès' };
+  }
+
+  // 16. Supprimer une boutique
+  static async supprimerBoutique(boutiqueId) {
+    const boutique = await Boutique.findByPk(boutiqueId);
+    if (!boutique) throw new Error('Boutique introuvable');
+    await boutique.destroy({ force: true });
+    return { message: 'Boutique supprimée avec succès' };
+  }
+
+  // 17. Vérifier un vendeur
+  static async verifierVendeur(vendeurId) {
+    const vendeur = await Utilisateur.findOne({ where: { id: vendeurId, role: 'Vendeur' } });
+    if (!vendeur) throw new Error('Vendeur introuvable');
+    await vendeur.update({ verifie: true });
+    return { message: 'Vendeur vérifié avec succès' };
+  }
+
+  // 18. Lister les signalements en attente
+  static async getSignalements() {
+    const signalements = await Signalement.findAll({
+      where: { statut: 'en_attente' },
+      include: [{ model: Utilisateur, as: 'signaleur', attributes: ['id', 'prenom', 'nom'] }],
+      order: [['createdAt', 'DESC']]
+    });
+    return { message: 'Liste des signalements en attente', signalements };
+  }
+
+  // 19. Traiter un signalement
+  static async traiterSignalement(signalementId) {
+    const signalement = await Signalement.findByPk(signalementId);
+    if (!signalement) throw new Error('Signalement introuvable');
+    await signalement.update({ statut: 'traite' });
+    return { message: 'Signalement marqué comme traité' };
+  }
+
+  // 20. Rejeter un signalement
+  static async rejeterSignalement(signalementId) {
+    const signalement = await Signalement.findByPk(signalementId);
+    if (!signalement) throw new Error('Signalement introuvable');
+    await signalement.update({ statut: 'rejete' });
+    return { message: 'Signalement rejeté' };
+  }
+
+  // 12. Stats globales
+  static async getStatsGlobales() {
+    const [totalVendeurs, totalAcheteurs, totalProduits, abonnementsActifs, paiements] = await Promise.all([
+      Utilisateur.count({ where: { role: 'Vendeur' } }),
+      Utilisateur.count({ where: { role: 'Acheteur' } }),
+      Produit.count(),
+      Abonnement.count({ where: { statut: 'actif' } }),
+      Paiement.findAll({ where: { statut: 'success' }, attributes: ['montant'] })
+    ]);
+
+    const revenus = paiements.reduce((sum, p) => sum + parseFloat(p.montant || 0), 0);
+
+    return {
+      message: 'Statistiques globales',
+      stats: { totalVendeurs, totalAcheteurs, totalProduits, abonnementsActifs, revenus }
+    };
+  }
+
+  // ======================== KPIs ========================
+
+  static async revenusParMois(annee) {
+    const anneeTarget = annee || new Date().getFullYear();
+    const rows = await Paiement.findAll({
+      where: {
+        statut: 'success',
+        createdAt: {
+          [Op.between]: [
+            new Date(`${anneeTarget}-01-01`),
+            new Date(`${anneeTarget}-12-31T23:59:59`)
+          ]
+        }
+      },
+      attributes: [
+        [fn('to_char', col('created_at'), 'YYYY-MM'), 'mois'],
+        [fn('SUM', col('montant')), 'total'],
+        [fn('COUNT', col('id')), 'nombrePaiements']
+      ],
+      group: [literal("to_char(created_at, 'YYYY-MM')")],
+      order: [[literal("to_char(created_at, 'YYYY-MM')"), 'ASC']],
+      raw: true
+    });
+    return { message: `Revenus mensuels ${anneeTarget}`, revenus: rows };
+  }
+
+  static async inscriptionsMensuelles(annee) {
+    const anneeTarget = annee || new Date().getFullYear();
+    const rows = await Utilisateur.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [
+            new Date(`${anneeTarget}-01-01`),
+            new Date(`${anneeTarget}-12-31T23:59:59`)
+          ]
+        }
+      },
+      attributes: [
+        'role',
+        [fn('to_char', col('created_at'), 'YYYY-MM'), 'mois'],
+        [fn('COUNT', col('id')), 'total']
+      ],
+      group: ['role', literal("to_char(created_at, 'YYYY-MM')")],
+      order: [[literal("to_char(created_at, 'YYYY-MM')"), 'ASC']],
+      raw: true
+    });
+    return { message: `Inscriptions mensuelles ${anneeTarget}`, inscriptions: rows };
+  }
+
+  static async abonnementsExpirationProche(jours = 7) {
+    const limite = new Date();
+    limite.setDate(limite.getDate() + parseInt(jours));
+    const abonnements = await Abonnement.findAll({
+      where: {
+        statut: 'actif',
+        dateFin: { [Op.between]: [new Date(), limite] }
+      },
+      include: [{
+        model: Utilisateur, as: 'utilisateur',
+        attributes: ['id', 'nom', 'prenom', 'email', 'telephone']
+      }],
+      order: [['dateFin', 'ASC']]
+    });
+    return { message: `Abonnements expirant dans ${jours} jours`, abonnements };
+  }
+
+  // ======================== PAIEMENTS ========================
+
+  static async tousLesPaiements({ statut, page = 1, limit = 20 }) {
+    const where = {};
+    if (statut) where.statut = statut;
+    const offset = (page - 1) * limit;
+    const { count, rows } = await Paiement.findAndCountAll({
+      where,
+      include: [{
+        model: Utilisateur, as: 'utilisateur',
+        attributes: ['id', 'nom', 'prenom', 'email']
+      }],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset
+    });
+    return { message: 'Liste des paiements', total: count, page: parseInt(page), paiements: rows };
+  }
+
+  static async paiementsEchoues() {
+    const paiements = await Paiement.findAll({
+      where: { statut: 'failed' },
+      include: [{
+        model: Utilisateur, as: 'utilisateur',
+        attributes: ['id', 'nom', 'prenom', 'email']
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+    return { message: 'Paiements échoués', paiements };
+  }
+
+  // ======================== ABONNEMENT MANUEL ========================
+
+  // M-04 : adminId ajouté pour audit trail
+  static async abonnementManuel(vendeurId, adminId) {
+    const vendeur = await Utilisateur.findOne({ where: { id: vendeurId, role: 'Vendeur' } });
+    if (!vendeur) throw new Error('Vendeur introuvable');
+
+    const dateDebut = new Date();
+    const dateFin = new Date();
+    dateFin.setMonth(dateFin.getMonth() + 1);
+
+    const abonnement = await Abonnement.create({
+      utilisateurId: vendeurId,
+      type: 'mensuel',
+      dateDebut,
+      dateFin,
+      montant: 0,
+      statut: 'actif'
+    });
+
+    // Audit trail — M-04
+    logger.info('AUDIT:abonnementManuel', {
+      action: 'abonnement_manuel',
+      adminId,
+      vendeurId,
+      vendeurEmail: vendeur.email,
+      abonnementId: abonnement.id,
+      dateFin,
+      at: new Date().toISOString(),
+    });
+
+    return { message: 'Abonnement gratuit accordé avec succès', abonnement };
+  }
+
+  static async revoquerAbonnement(abonnementId) {
+    const abonnement = await Abonnement.findByPk(abonnementId);
+    if (!abonnement) throw new Error('Abonnement introuvable');
+    await abonnement.update({ statut: 'expire' });
+    return { message: 'Abonnement révoqué avec succès' };
+  }
+
+  // ======================== CATÉGORIES ========================
+
+  static async modifierCategorie(categorieId, data) {
+    const categorie = await Categorie.findByPk(categorieId);
+    if (!categorie) throw new Error('Catégorie introuvable');
+    const { nom, description } = data;
+    if (nom && nom !== categorie.nom) {
+      const existe = await Categorie.findOne({ where: { nom } });
+      if (existe) throw new Error('Ce nom de catégorie est déjà utilisé');
+    }
+    await categorie.update({ nom: nom || categorie.nom, description: description ?? categorie.description });
+    return { message: 'Catégorie modifiée avec succès', categorie };
+  }
+
+  static async supprimerCategorie(categorieId) {
+    const categorie = await Categorie.findByPk(categorieId);
+    if (!categorie) throw new Error('Catégorie introuvable');
+    const nbProduits = await Produit.count({ where: { categorieId } });
+    if (nbProduits > 0) throw new Error(`Impossible de supprimer : ${nbProduits} produit(s) utilisent cette catégorie`);
+    await categorie.destroy();
+    return { message: 'Catégorie supprimée avec succès' };
+  }
+
+  // ======================== NOTIFICATION BROADCAST ========================
+
+  static async notificationGlobale({ titre, message, type = 'systeme', cible = 'tous' }) {
+    const whereRole = {};
+    if (cible === 'vendeurs') whereRole.role = 'Vendeur';
+    else if (cible === 'acheteurs') whereRole.role = 'Acheteur';
+
+    const utilisateurs = await Utilisateur.findAll({
+      where: { ...whereRole, statut: 'actif' },
+      attributes: ['id']
+    });
+
+    if (utilisateurs.length === 0) return { message: 'Aucun utilisateur cible trouvé', envoyes: 0 };
+
+    const notifications = utilisateurs.map(u => ({
+      utilisateurId: u.id,
+      titre,
+      message,
+      type,
+      lue: false
+    }));
+
+    await Notification.bulkCreate(notifications);
+    return { message: `Notification envoyée à ${utilisateurs.length} utilisateur(s)`, envoyes: utilisateurs.length };
+  }
+
+  // ======================== MODÉRATION AVANCÉE ========================
+
+  static async produitsEnAttente() {
+    const produits = await Produit.findAll({
+      where: { statut: 'en_attente' },
+      include: [
+        { model: Utilisateur, as: 'vendeur', attributes: ['id', 'nom', 'prenom'] },
+        { model: Categorie, as: 'categorie', attributes: ['id', 'nom'] }
+      ],
+      order: [['createdAt', 'ASC']]
+    });
+    return { message: 'Produits en attente de modération', produits };
+  }
 
 }
 

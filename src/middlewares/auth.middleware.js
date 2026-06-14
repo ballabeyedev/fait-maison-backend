@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { jwtConfig } = require('../config/security');
 const User = require('../models/utilisateur.model');
+const TokenBlacklist = require('../models/tokenBlacklist.model');
+const logger = require('../utils/logger');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -12,6 +14,12 @@ const authMiddleware = async (req, res, next) => {
 
     // Extraire le token
     const token = authHeader.split(' ')[1];
+
+    // Vérifier si le token est blacklisté
+    const blacklisted = await TokenBlacklist.findOne({ where: { token } });
+    if (blacklisted) {
+      return res.status(401).json({ message: 'Token révoqué, veuillez vous reconnecter' });
+    }
 
     // Vérifier et décoder le token
     const decoded = jwt.verify(token, jwtConfig.secret);
@@ -28,7 +36,7 @@ const authMiddleware = async (req, res, next) => {
     // Passer au prochain middleware ou route
     next();
   } catch (err) {
-    console.error('Erreur middleware auth:', err);
+    logger.error('auth.middleware', { message: err.message });
 
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Token expiré' });

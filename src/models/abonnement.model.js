@@ -1,7 +1,6 @@
-// abonnement.model.js
+// models/abonnement.model.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
-const User = require('./utilisateur.model');
 
 const Abonnement = sequelize.define('Abonnement', {
   id: {
@@ -15,40 +14,51 @@ const Abonnement = sequelize.define('Abonnement', {
     allowNull: false,
     references: {
       model: 'utilisateur',
-      key: 'id'
+      key: 'id',
     },
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
   },
 
   type: {
     type: DataTypes.ENUM('essai', 'mensuel'),
-    allowNull: false
+    allowNull: false,
   },
 
   dateDebut: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
   },
 
   dateFin: {
     type: DataTypes.DATE,
-    allowNull: false
+    allowNull: false,
   },
 
   statut: {
     type: DataTypes.ENUM('actif', 'expire'),
-    defaultValue: 'actif'
+    defaultValue: 'actif',
   },
 
   montant: {
     type: DataTypes.INTEGER,
-    allowNull: true
-  }
+    allowNull: true,
+  },
 
 }, {
   tableName: 'abonnement',
   timestamps: true,
-  underscored: true
+  underscored: true,
+  // MED-08 : index sur les colonnes de filtrage fréquentes
+  indexes: [
+    { fields: ['utilisateur_id'] },
+    { fields: ['statut'] },
+    { fields: ['date_fin'] },
+  ],
 });
+
+// Méthode d'instance : vérifier si l'abonnement est encore actif
+Abonnement.prototype.estActif = function () {
+  return this.statut === 'actif' && new Date(this.dateFin) > new Date();
+};
 
 module.exports = Abonnement;

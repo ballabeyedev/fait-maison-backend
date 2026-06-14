@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../../controllers/admin/admin.controller');
+const configController = require('../../controllers/admin/config.controller');
 const auth = require('../../middlewares/auth.middleware');
-const isAdmin = require('../../middlewares/isAdmin.middleware'); 
+const isAdmin = require('../../middlewares/isAdmin.middleware');
 const checkActiveUser = require('../../middlewares/checkActiveUser.middleware');
 
 router.use(auth);
@@ -151,5 +152,50 @@ router.get('/nombre-produits-actifs', adminController.nombreProduitsActifs);
  *         description: Catégorie ajoutée
  */
 router.post('/ajout-categorie', adminController.ajoutCategorie);
+
+router.put('/vendeur/:id/suspendre', adminController.suspendreVendeur);
+router.put('/vendeur/:id/activer', adminController.activerVendeur);
+router.put('/acheteur/:id/suspendre', adminController.suspendreAcheteur);
+router.get('/abonnements', adminController.getAbonnements);
+router.get('/stats-globales', adminController.getStatsGlobales);
+
+// -------------------- MODÉRATION --------------------
+router.put('/produit/:id/approuver', adminController.approuverProduit);
+router.put('/produit/:id/rejeter', adminController.rejeterProduit);
+router.delete('/produit/:id', adminController.supprimerProduit);
+router.delete('/boutique/:id', adminController.supprimerBoutique);
+router.put('/vendeur/:id/verifier', adminController.verifierVendeur);
+router.get('/signalements', adminController.getSignalements);
+router.put('/signalement/:id/traiter', adminController.traiterSignalement);
+router.put('/signalement/:id/rejeter', adminController.rejeterSignalement);
+
+// -------------------- CONFIGURATION APP --------------------
+router.get('/configs', configController.getAllConfigs);
+router.get('/configs/prix-abonnement', configController.getPrixAbonnement);
+router.post('/configs', configController.ajouterConfig);
+router.put('/configs/:cle', configController.modifierConfig);
+
+// -------------------- KPIs --------------------
+router.get('/revenus-mensuels', adminController.revenusParMois);
+router.get('/inscriptions-mensuelles', adminController.inscriptionsMensuelles);
+router.get('/abonnements-expiration', adminController.abonnementsExpirationProche);
+
+// -------------------- PAIEMENTS --------------------
+router.get('/paiements', adminController.tousLesPaiements);
+router.get('/paiements/echecs', adminController.paiementsEchoues);
+
+// -------------------- ABONNEMENT MANUEL --------------------
+router.post('/abonnement-manuel/:vendeurId', adminController.abonnementManuel);
+router.put('/abonnement/:id/revoquer', adminController.revoquerAbonnement);
+
+// -------------------- CATÉGORIES --------------------
+router.put('/categorie/:id', adminController.modifierCategorie);
+router.delete('/categorie/:id', adminController.supprimerCategorie);
+
+// -------------------- NOTIFICATION BROADCAST --------------------
+router.post('/notification-globale', adminController.notificationGlobale);
+
+// -------------------- MODÉRATION AVANCÉE --------------------
+router.get('/produits-en-attente', adminController.produitsEnAttente);
 
 module.exports = router;
