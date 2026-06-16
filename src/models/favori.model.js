@@ -33,7 +33,7 @@ const Favori = sequelize.define('Favori', {
   indexes: [
     {
       unique: true,
-      fields: ['acheteur_id', 'boutique_id']
+      fields: ['acheteurId', 'boutiqueId']
     }
   ]
 });

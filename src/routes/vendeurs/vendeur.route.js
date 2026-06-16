@@ -5,10 +5,7 @@ const authMiddleware = require('../../middlewares/auth.middleware');
 const checkActiveUser = require('../../middlewares/checkActiveUser.middleware');
 const isVendeur = require('../../middlewares/isVendeur.middleware');
 const finAbonnement = require('../../middlewares/finAbonnement.middleware');
-const multer = require('multer');
-
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = require('../../middlewares/upload.middleware');
 
 router.use(authMiddleware);
 router.use(checkActiveUser);
