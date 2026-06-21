@@ -31,21 +31,27 @@ const passwordPolicy = {
   requireSpecialChar: true,
 };
 
-// Rate Limiting global
+// En développement, on désactive le rate limiting pour ne pas bloquer les tests
+// (un dashboard fait naturellement beaucoup de requêtes, doublées par React StrictMode).
+const _skipEnDev = () => process.env.NODE_ENV !== 'production';
+
+// Rate Limiting global — configurable via RATE_LIMIT_MAX (défaut 1000 / 15 min / IP en prod)
 const rateLimitConfig = {
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: Number(process.env.RATE_LIMIT_MAX) || 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: _skipEnDev,
   message: { success: false, message: 'Trop de requêtes, veuillez réessayer dans 15 minutes.' }
 };
 
-// Rate Limiting spécifique auth/OTP
+// Rate Limiting spécifique auth/OTP — strict en prod (anti brute-force), désactivé en dev
 const authRateLimitConfig = {
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: _skipEnDev,
   message: { success: false, message: 'Trop de tentatives, veuillez réessayer dans 15 minutes.' }
 };
 

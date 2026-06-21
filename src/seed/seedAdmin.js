@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const Utilisateur = require('../models/utilisateur.model');
 const ConfigApp = require('../models/configApp.model');
+const { Menu, Permission } = require('../models');
 const logger = require('../utils/logger');
 
 async function seedAdmin() {
@@ -16,11 +17,11 @@ async function seedAdmin() {
   }
 
   try {
-    const existing = await Utilisateur.findOne({ where: { email } });
+    let admin = await Utilisateur.findOne({ where: { email } });
 
-    if (!existing) {
+    if (!admin) {
       const hash = await bcrypt.hash(mdp, 12);
-      await Utilisateur.create({
+      admin = await Utilisateur.create({
         nom: 'Super',
         prenom: 'Admin',
         email,
@@ -33,6 +34,27 @@ async function seedAdmin() {
     } else {
       logger.info(`[SEED] Admin déjà existant : ${email}`);
     }
+
+    // Accorder à l'admin TOUTES les permissions sur TOUS les menus (bootstrap).
+    // Sans cela, le login renvoie une liste de menus vide → menu latéral vide.
+    const menus = await Menu.findAll();
+    if (menus.length === 0) {
+      logger.warn('[SEED] Aucun menu trouvé — lancez le seed des menus avant (ou via runSeed).');
+    }
+    for (const menu of menus) {
+      const [perm, created] = await Permission.findOrCreate({
+        where: { userId: admin.id, menuId: menu.id },
+        defaults: {
+          userId: admin.id,
+          menuId: menu.id,
+          canView: true, canCreate: true, canUpdate: true, canDelete: true,
+        },
+      });
+      if (!created) {
+        await perm.update({ canView: true, canCreate: true, canUpdate: true, canDelete: true });
+      }
+    }
+    logger.info(`[SEED] Permissions accordées à l'admin sur ${menus.length} menus`);
 
     // Initialiser le prix d'abonnement par défaut si absent
     const prixExistant = await ConfigApp.findOne({ where: { cle: 'prix_abonnement' } });

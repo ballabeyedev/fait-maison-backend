@@ -29,6 +29,24 @@ const Paiement = sequelize.define('Paiement', {
     onDelete: 'SET NULL',
   },
 
+  // Un paiement règle SOIT un abonnement (vendeur) SOIT une commande (acheteur)
+  commandeId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'commande',
+      key: 'id',
+    },
+    onDelete: 'SET NULL',
+  },
+
+  // 'abonnement' (par défaut, rétro-compatible) ou 'commande'
+  type: {
+    type: DataTypes.ENUM('abonnement', 'commande'),
+    allowNull: false,
+    defaultValue: 'abonnement',
+  },
+
   methode: {
     type: DataTypes.ENUM('orange_money', 'wave'),
     allowNull: false,

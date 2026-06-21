@@ -94,6 +94,7 @@ const categorieRoutes = require('./routes/categories/categorie.route');
 const signalementRoutes = require('./routes/signalements/signalement.route');
 const deviceTokenRoutes = require('./routes/deviceToken.route');
 const adminManagementRoutes = require('./routes/adminManagement.route');
+const commandeRoutes = require('./routes/commandes/commande.route');
 
 
 // Définition des routes
@@ -104,6 +105,7 @@ app.use('/faitMaison/vendeur', vendeurRoutes);
 app.use('/faitMaison/acheteurs', acheteursRoutes);
 app.use('/faitMaison/admin', adminRoutes);
 app.use('/faitMaison/paiement', paiementRoutes);
+app.use('/faitMaison/commandes', commandeRoutes);
 app.use('/faitMaison/account', accountRoutes);
 app.use('/faitMaison/favoris', favoriRoutes);
 app.use('/faitMaison/avis', avisRoutes);
@@ -123,6 +125,32 @@ app.get('/faitMaison/prix-abonnement', async (req, res) => {
     return res.status(200).json({ prix, devise: 'FCFA' });
   } catch {
     return res.status(200).json({ prix: 2000, devise: 'FCFA' });
+  }
+});
+
+// Route publique : configuration de l'app mobile (version minimale, maintenance)
+// Permet de forcer la mise à jour ou d'afficher un écran de maintenance côté mobile.
+app.get('/faitMaison/app/config', async (req, res) => {
+  try {
+    const ConfigService = require('./services/config/config.service');
+    const [minAndroid, minIos, maintenance] = await Promise.all([
+      ConfigService.getConfig('min_version_android').catch(() => null),
+      ConfigService.getConfig('min_version_ios').catch(() => null),
+      ConfigService.getConfig('maintenance').catch(() => null),
+    ]);
+    return res.status(200).json({
+      minVersionAndroid: minAndroid?.valeur || '1.0.0',
+      minVersionIos: minIos?.valeur || '1.0.0',
+      maintenance: maintenance?.valeur === 'true' || maintenance?.valeur === true,
+      message: maintenance?.description || null,
+    });
+  } catch {
+    return res.status(200).json({
+      minVersionAndroid: '1.0.0',
+      minVersionIos: '1.0.0',
+      maintenance: false,
+      message: null,
+    });
   }
 });
 

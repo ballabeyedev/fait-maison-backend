@@ -399,3 +399,26 @@ exports.produitsEnAttente = async (req, res) => {
     return res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+// -------------------- COMMANDES (e-commerce) --------------------
+
+exports.toutesCommandes = async (req, res) => {
+  try {
+    const { statut, page, limit } = req.query;
+    const result = await AdminService.toutesLesCommandes({ statut, page, limit });
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur toutesCommandes:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+exports.statsEcommerce = async (req, res) => {
+  try {
+    const result = await AdminService.statsEcommerce();
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur statsEcommerce:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+};

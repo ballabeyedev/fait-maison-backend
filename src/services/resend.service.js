@@ -1,7 +1,14 @@
 const { Resend } = require('resend');
 const logger = require('../utils/logger');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Si la clé est absente, on n'instancie pas Resend : l'envoi d'e-mails est
+// simplement désactivé (comme les notifications push sans Firebase). Cela permet
+// de démarrer le backend en local sans compte Resend.
+const _resendKey = process.env.RESEND_API_KEY;
+const resend = _resendKey ? new Resend(_resendKey) : null;
+if (!resend) {
+  logger.warn('[RESEND] RESEND_API_KEY non défini — envoi d\'e-mails désactivé.');
+}
 const FROM = process.env.MAIL_FROM || 'Fait Maison <onboarding@resend.dev>';
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -10,6 +17,12 @@ const isProd = process.env.NODE_ENV === 'production';
  * @param {{ to: string|string[], subject: string, html: string, attachments?: Array }} opts
  */
 async function sendEmail({ to, subject, html, attachments = [] }) {
+  // E-mails désactivés (clé absente) → on ignore proprement sans planter.
+  if (!resend) {
+    logger.warn('[RESEND] e-mail ignoré (service désactivé)', { subject });
+    return null;
+  }
+
   const formattedAttachments = attachments.map(att => ({
     filename: att.filename,
     content: att.content   // Buffer ou base64

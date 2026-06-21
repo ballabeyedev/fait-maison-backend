@@ -10,9 +10,14 @@ const registerSchema = Joi.object({
   role: Joi.string().valid('Acheteur', 'Vendeur').optional()
 }).unknown(true);
 
+// Le contrôleur identifie l'utilisateur via email OU téléphone (identifiant = email || telephone).
+// On accepte donc l'un ou l'autre, + mot_de_passe. (Aligné sur auth.controller.login.)
 const loginSchema = Joi.object({
-  identifiant: Joi.string().required().messages({ 'any.required': 'L\'identifiant est requis' }),
+  email: Joi.string().email().optional().messages({ 'string.email': 'Email invalide' }),
+  telephone: Joi.string().optional().allow('', null),
   mot_de_passe: Joi.string().required().messages({ 'any.required': 'Le mot de passe est requis' })
-});
+})
+  .or('email', 'telephone')
+  .messages({ 'object.missing': 'Email ou téléphone requis' });
 
 module.exports = { registerSchema, loginSchema };

@@ -29,16 +29,18 @@ const HOST = process.env.HOST || '0.0.0.0';
 
 (async () => {
   try {
-    // CRIT-02 : sync({ alter: true }) uniquement en développement
-    // En production : ne jamais altérer le schéma au démarrage — utiliser `npm run migrate`
+    // En production : ne jamais altérer le schéma au démarrage — utiliser des migrations.
+    // En développement : on utilise sync() simple (création des tables manquantes).
+    //   NB : on n'utilise PAS { alter: true } car il génère un SQL invalide sur PostgreSQL
+    //   pour les colonnes `unique` (erreur "syntax error at or near UNIQUE", bug Sequelize 6).
+    //   Pour faire évoluer un schéma existant, passez par une migration ou recréez la base de dev.
     const isProd = process.env.NODE_ENV === 'production';
-    if (isProd) {
-      await sequelize.sync({ force: false }); // vérifie la connexion sans modifier le schéma
-      logger.info('DB connectée (mode production — schema non altéré)');
-    } else {
-      await sequelize.sync({ alter: true });
-      logger.info('DB synchronisée avec alter:true (mode développement)');
-    }
+    await sequelize.sync({ force: false });
+    logger.info(
+      isProd
+        ? 'DB connectée (mode production — schéma non altéré)'
+        : 'DB synchronisée (création des tables manquantes)'
+    );
 
     const server = app.listen(PORT, HOST, () => {
       logger.info(`Serveur démarré sur ${HOST}:${PORT} [${process.env.NODE_ENV || 'development'}]`);

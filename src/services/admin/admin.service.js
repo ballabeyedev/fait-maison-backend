@@ -1,4 +1,4 @@
-const { Utilisateur, Produit, Categorie, Abonnement, Paiement, Boutique, Signalement, Notification } = require('../../models');
+const { Utilisateur, Produit, Categorie, Abonnement, Paiement, Boutique, Signalement, Notification, Commande, LigneCommande } = require('../../models');
 const logger = require('../../utils/logger');
 const { Op, fn, col, literal } = require('sequelize');
 const sequelize = require('../../config/db');
@@ -486,6 +486,73 @@ static async creerCategorie(data) {
       order: [['createdAt', 'ASC']]
     });
     return { message: 'Produits en attente de modération', produits };
+  }
+
+  // -------------------- COMMANDES (e-commerce) --------------------
+
+  // Liste paginée de toutes les commandes (filtrable par statut)
+  static async toutesLesCommandes({ statut, page = 1, limit = 20 } = {}) {
+    const where = {};
+    if (statut) where.statut = statut;
+
+    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    const { rows, count } = await Commande.findAndCountAll({
+      where,
+      include: [
+        { model: Utilisateur, as: 'acheteur', attributes: ['id', 'nom', 'prenom', 'telephone'] },
+        { model: Utilisateur, as: 'vendeur', attributes: ['id', 'nom', 'prenom', 'telephone'] },
+        { model: LigneCommande, as: 'lignes', attributes: ['id', 'quantite'] },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit, 10),
+      offset,
+      distinct: true,
+    });
+
+    return {
+      commandes: rows,
+      pagination: {
+        total: count,
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        totalPages: Math.ceil(count / parseInt(limit, 10)),
+      },
+    };
+  }
+
+  // Statistiques e-commerce globales
+  static async statsEcommerce() {
+    // Chiffre d'affaires = somme des commandes payées
+    const caRow = await Commande.findOne({
+      attributes: [[fn('COALESCE', fn('SUM', col('montant_total')), 0), 'ca']],
+      where: { statut_paiement: 'paye' },
+      raw: true,
+    });
+    const chiffreAffaires = parseFloat(caRow?.ca || 0);
+
+    const totalCommandes = await Commande.count();
+    const commandesPayees = await Commande.count({ where: { statutPaiement: 'paye' } });
+    const panierMoyen = commandesPayees > 0 ? chiffreAffaires / commandesPayees : 0;
+
+    // Répartition par statut
+    const parStatutRaw = await Commande.findAll({
+      attributes: ['statut', [fn('COUNT', col('id')), 'nombre']],
+      group: ['statut'],
+      raw: true,
+    });
+    const parStatut = {};
+    for (const r of parStatutRaw) {
+      parStatut[r.statut] = parseInt(r.nombre, 10);
+    }
+
+    return {
+      chiffreAffaires,
+      totalCommandes,
+      commandesPayees,
+      panierMoyen: Math.round(panierMoyen),
+      parStatut,
+    };
   }
 
 }

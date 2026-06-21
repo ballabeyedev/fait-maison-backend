@@ -7,19 +7,39 @@ const DEFAULT_MENUS = [
   { name: 'Acheteurs',       code: 'ACHETEURS',     path: '/acheteurs',     icon: 'people',    ordre: 3 },
   { name: 'Produits',        code: 'PRODUITS',      path: '/produits',      icon: 'inventory', ordre: 4 },
   { name: 'Catégories',      code: 'CATEGORIES',    path: '/categories',    icon: 'category',  ordre: 5 },
-  { name: 'Signalements',    code: 'SIGNALEMENTS',  path: '/signalements',  icon: 'report',    ordre: 6 },
-  { name: 'Administrateurs', code: 'ADMINS',        path: '/admins',        icon: 'admin',     ordre: 7 },
-  { name: 'Menus',           code: 'MENUS',         path: '/menus',         icon: 'menu',      ordre: 8 },
-  { name: 'Configuration',   code: 'CONFIG',        path: '/config',        icon: 'settings',  ordre: 9 },
+  { name: 'Commandes',       code: 'COMMANDES',     path: '/commandes',     icon: 'receipt',   ordre: 6 },
+  { name: 'Paiements',       code: 'PAIEMENTS',     path: '/paiements',     icon: 'payment',   ordre: 7 },
+  { name: 'Abonnements',     code: 'ABONNEMENTS',   path: '/abonnements',   icon: 'card',      ordre: 8 },
+  { name: 'Modération',      code: 'MODERATION',    path: '/moderation',    icon: 'check',     ordre: 9 },
+  { name: 'Notifications',   code: 'NOTIFICATIONS', path: '/notifications', icon: 'bell',      ordre: 10 },
+  { name: 'Signalements',    code: 'SIGNALEMENTS',  path: '/signalements',  icon: 'report',    ordre: 11 },
+  { name: 'Administrateurs', code: 'ADMINS',        path: '/admins',        icon: 'admin',     ordre: 12 },
+  { name: 'Menus',           code: 'MENUS',         path: '/menus',         icon: 'menu',      ordre: 13 },
+  { name: 'Configuration',   code: 'CONFIG',        path: '/config',        icon: 'settings',  ordre: 14 },
 ];
 
+// Fonction réutilisable (appelée aussi par runSeed.js)
 async function seedMenus() {
-  await sequelize.authenticate();
   for (const m of DEFAULT_MENUS) {
     await Menu.findOrCreate({ where: { code: m.code }, defaults: m });
   }
-  console.log('[SEED] Menus initialisés.');
-  process.exit(0);
+  return DEFAULT_MENUS.length;
 }
 
-seedMenus().catch((e) => { console.error(e); process.exit(1); });
+module.exports = seedMenus;
+module.exports.DEFAULT_MENUS = DEFAULT_MENUS;
+
+// Exécution directe : `npm run seed:menus`
+if (require.main === module) {
+  (async () => {
+    try {
+      await sequelize.authenticate();
+      const n = await seedMenus();
+      console.log(`[SEED] ${n} menus initialisés.`);
+      process.exit(0);
+    } catch (e) {
+      console.error(e);
+      process.exit(1);
+    }
+  })();
+}

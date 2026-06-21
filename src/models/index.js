@@ -7,6 +7,8 @@ const Produit = require('./produit.model');
 const Categorie = require('./categorie.model');
 const Abonnement = require('./abonnement.model');
 const Paiement = require('./paiement.model');
+const Commande = require('./commande.model');
+const LigneCommande = require('./ligneCommande.model');
 const UserOtp = require('./userOtp.model');
 const Avis = require('./avis.model');
 const Favori = require('./favori.model');
@@ -37,6 +39,28 @@ Paiement.belongsTo(Utilisateur, { foreignKey: 'utilisateurId', as: 'utilisateur'
 
 Abonnement.hasMany(Paiement, { foreignKey: 'abonnementId', as: 'paiements' });
 Paiement.belongsTo(Abonnement, { foreignKey: 'abonnementId', as: 'abonnement' });
+
+// ===================== COMMANDES =====================
+
+// Acheteur ↔ Commandes
+Utilisateur.hasMany(Commande, { foreignKey: 'acheteurId', as: 'commandesAchetees' });
+Commande.belongsTo(Utilisateur, { foreignKey: 'acheteurId', as: 'acheteur' });
+
+// Vendeur ↔ Commandes reçues
+Utilisateur.hasMany(Commande, { foreignKey: 'vendeurId', as: 'commandesRecues' });
+Commande.belongsTo(Utilisateur, { foreignKey: 'vendeurId', as: 'vendeur' });
+
+// Commande ↔ Lignes
+Commande.hasMany(LigneCommande, { foreignKey: 'commandeId', as: 'lignes' });
+LigneCommande.belongsTo(Commande, { foreignKey: 'commandeId', as: 'commande' });
+
+// Ligne ↔ Produit (snapshot conservé même si le produit est supprimé)
+Produit.hasMany(LigneCommande, { foreignKey: 'produitId', as: 'lignesCommande' });
+LigneCommande.belongsTo(Produit, { foreignKey: 'produitId', as: 'produit' });
+
+// Commande ↔ Paiement
+Commande.hasMany(Paiement, { foreignKey: 'commandeId', as: 'paiements' });
+Paiement.belongsTo(Commande, { foreignKey: 'commandeId', as: 'commande' });
 
 // ===================== AVIS =====================
 
@@ -97,6 +121,7 @@ Permission.belongsTo(Menu, { foreignKey: 'menuId', as: 'menu' });
 module.exports = {
   sequelize,
   Utilisateur, Produit, Categorie, Boutique, Abonnement, Paiement,
+  Commande, LigneCommande,
   UserOtp, Avis, Favori, Message, Promotion, Notification,
   Signalement, TokenBlacklist, ConfigApp, DeviceToken,
   Menu, Permission,

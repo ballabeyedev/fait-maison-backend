@@ -198,4 +198,8 @@ router.post('/notification-globale', adminController.notificationGlobale);
 // -------------------- MODÉRATION AVANCÉE --------------------
 router.get('/produits-en-attente', adminController.produitsEnAttente);
 
+// -------------------- COMMANDES (e-commerce) --------------------
+router.get('/commandes', adminController.toutesCommandes);
+router.get('/stats-ecommerce', adminController.statsEcommerce);
+
 module.exports = router;

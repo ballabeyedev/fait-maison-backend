@@ -10,7 +10,9 @@ const { v4: uuidv4 } = require('uuid');
 class PaiementService {
 
   // -------------------- INITIER PAIEMENT --------------------
-  static async initPaiement({ utilisateurId, methode, montant, numeroTelephone }) {
+  // type : 'abonnement' (défaut, vendeur) ou 'commande' (acheteur)
+  // commandeId : requis si type === 'commande'
+  static async initPaiement({ utilisateurId, methode, montant, numeroTelephone, type = 'abonnement', commandeId = null }) {
     const t = await sequelize.transaction();
 
     try {
@@ -23,6 +25,8 @@ class PaiementService {
         methode,
         montant,
         numeroTelephone,
+        type,
+        commandeId,
         referencePaiement: orderId,   // on sauvegarde l'orderId tout de suite
         statut: 'pending',
       }, { transaction: t });
@@ -97,7 +101,18 @@ class PaiementService {
       paiement.datePaiement = new Date();
       await paiement.save({ transaction: t });   // maintenant dans la transaction
 
-      // Si paiement réussi → vérifier montant puis créer l'abonnement
+      // Si paiement réussi ET qu'il règle une COMMANDE → marquer payée + décrémenter le stock
+      if (isSuccess && paiement.type === 'commande') {
+        if (paiement.commandeId) {
+          // require paresseux pour éviter tout cycle de dépendance
+          const CommandeService = require('../commandes/commande.service');
+          await CommandeService.marquerCommandePayee(paiement.commandeId, t);
+        }
+        await t.commit();
+        return paiement;
+      }
+
+      // Si paiement réussi (abonnement) → vérifier montant puis créer l'abonnement
       if (isSuccess) {
         const prixRequis = await ConfigService.getPrixAbonnement();
         if (parseFloat(paiement.montant) < prixRequis) {

@@ -11,6 +11,12 @@ require('../models/index');
     await sequelize.authenticate();
     logger.info('[runSeed] Connexion DB OK');
 
+    // 1) Menus d'abord (l'admin a besoin qu'ils existent pour recevoir les permissions)
+    const seedMenus = require('./seedMenus');
+    const n = await seedMenus();
+    logger.info(`[runSeed] ${n} menus initialisés`);
+
+    // 2) Admin + permissions complètes
     const seedAdmin = require('./seedAdmin');
     await seedAdmin();
 
